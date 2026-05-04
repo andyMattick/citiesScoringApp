@@ -20,4 +20,3 @@
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
-# This file is the base TypeScript configuration for the project. It specifies the compiler options and the files to include in the compilation process. The "references" field points to another TypeScript configuration file, which can be used for specific settings related to Node.js.
