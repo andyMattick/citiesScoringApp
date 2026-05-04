@@ -1,0 +1,259 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`App > renders the game hub screen 1`] = `
+<DocumentFragment>
+  <main
+    class="shell"
+  >
+    <section
+      class="hero-card"
+    >
+      <div
+        class="hero-copy"
+      >
+        <p
+          class="eyebrow"
+        >
+          Board game score hub
+        </p>
+        <h1>
+          Choose a game and jump straight to scoring.
+        </h1>
+        <p
+          class="lede"
+        >
+          Build one scoring companion per game in this workspace. Cities is ready now, and the rest can be added behind the same home screen.
+        </p>
+      </div>
+      <section
+        aria-labelledby="games-heading"
+        class="panel"
+      >
+        <h2
+          id="games-heading"
+        >
+          Select a game
+        </h2>
+        <div
+          class="game-grid"
+        >
+          <article
+            class="game-card available"
+          >
+            <p
+              class="eyebrow"
+            >
+              Ready
+            </p>
+            <h3>
+              Cities Board Game
+            </h3>
+            <p
+              class="support-copy"
+            >
+              Multiplayer end-game scoring with round-by-round suspense
+            </p>
+            <button
+              class="primary"
+              type="button"
+            >
+              Open Cities scorer
+            </button>
+          </article>
+          <article
+            class="game-card available"
+          >
+            <p
+              class="eyebrow"
+            >
+              Ready
+            </p>
+            <h3>
+              Secret Hitler
+            </h3>
+            <p
+              class="support-copy"
+            >
+              Touch-only pass-the-phone role reveal
+            </p>
+            <button
+              class="primary"
+              type="button"
+            >
+              Open Secret Hitler reveal
+            </button>
+          </article>
+          <article
+            class="game-card"
+          >
+            <p
+              class="eyebrow"
+            >
+              Coming soon
+            </p>
+            <h3>
+              Ticket to Ride
+            </h3>
+            <p
+              class="support-copy"
+            >
+              Route and objective scoring
+            </p>
+            <button
+              class="secondary"
+              disabled=""
+              type="button"
+            >
+              Coming soon
+            </button>
+          </article>
+          <article
+            class="game-card"
+          >
+            <p
+              class="eyebrow"
+            >
+              Coming soon
+            </p>
+            <h3>
+              Cascadia
+            </h3>
+            <p
+              class="support-copy"
+            >
+              Habitat and wildlife scoring
+            </p>
+            <button
+              class="secondary"
+              disabled=""
+              type="button"
+            >
+              Coming soon
+            </button>
+          </article>
+          <article
+            class="game-card"
+          >
+            <p
+              class="eyebrow"
+            >
+              Coming soon
+            </p>
+            <h3>
+              Azul
+            </h3>
+            <p
+              class="support-copy"
+            >
+              Wall placement and penalty scoring
+            </p>
+            <button
+              class="secondary"
+              disabled=""
+              type="button"
+            >
+              Coming soon
+            </button>
+          </article>
+          <article
+            class="game-card"
+          >
+            <p
+              class="eyebrow"
+            >
+              Coming soon
+            </p>
+            <h3>
+              Sagrada
+            </h3>
+            <p
+              class="support-copy"
+            >
+              Dice window and objective scoring
+            </p>
+            <button
+              class="secondary"
+              disabled=""
+              type="button"
+            >
+              Coming soon
+            </button>
+          </article>
+          <article
+            class="game-card"
+          >
+            <p
+              class="eyebrow"
+            >
+              Coming soon
+            </p>
+            <h3>
+              Wingspan
+            </h3>
+            <p
+              class="support-copy"
+            >
+              Eggs, birds, and bonus cards
+            </p>
+            <button
+              class="secondary"
+              disabled=""
+              type="button"
+            >
+              Coming soon
+            </button>
+          </article>
+          <article
+            class="game-card"
+          >
+            <p
+              class="eyebrow"
+            >
+              Coming soon
+            </p>
+            <h3>
+              Splendor
+            </h3>
+            <p
+              class="support-copy"
+            >
+              Prestige points and nobles
+            </p>
+            <button
+              class="secondary"
+              disabled=""
+              type="button"
+            >
+              Coming soon
+            </button>
+          </article>
+          <article
+            class="game-card"
+          >
+            <p
+              class="eyebrow"
+            >
+              Coming soon
+            </p>
+            <h3>
+              Terraforming Mars
+            </h3>
+            <p
+              class="support-copy"
+            >
+              TR and end-game awards
+            </p>
+            <button
+              class="secondary"
+              disabled=""
+              type="button"
+            >
+              Coming soon
+            </button>
+          </article>
+        </div>
+      </section>
+    </section>
+  </main>
+</DocumentFragment>
+`;

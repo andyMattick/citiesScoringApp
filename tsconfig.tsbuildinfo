@@ -1,0 +1,1 @@
+{"root":["./src/App.test.tsx","./src/App.tsx","./src/main.tsx","./src/app/data.ts","./src/app/reducer.test.ts","./src/app/reducer.ts","./src/app/scoring.test.ts","./src/app/scoring.ts","./src/app/types.ts","./src/app/validation.test.ts","./src/app/validation.ts","./src/test/setup.ts"],"version":"5.9.3"}
