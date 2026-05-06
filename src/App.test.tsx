@@ -7,8 +7,8 @@ describe("App", () => {
   it("renders the game hub screen", () => {
     const { asFragment } = render(<App />);
     expect(screen.getByRole("heading", { name: "Select a game" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Open Cities scorer" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Open Secret Hitler reveal" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cities scorer" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reveal Secret Hitler roles" })).toBeInTheDocument();
     expect(asFragment()).toMatchSnapshot();
   });
 
@@ -16,7 +16,7 @@ describe("App", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole("button", { name: "Open Cities scorer" }));
+    await user.click(screen.getByRole("button", { name: "Cities scorer" }));
 
     await user.click(screen.getByRole("button", { name: /Sydney/i }));
 

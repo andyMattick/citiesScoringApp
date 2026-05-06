@@ -231,6 +231,81 @@ h1 {
   flex-wrap: wrap;
 }
 
+.choice-row {
+  display: flex;
+  gap: 14px;
+  margin: 20px 0 0;
+  flex-wrap: wrap;
+}
+
+.choice-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  text-align: left;
+}
+
+.choice-card span {
+  color: rgba(247, 240, 232, 0.62);
+  font-size: 0.92rem;
+}
+
+.panel-tabs {
+  display: inline-flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.panel-tab {
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: transparent;
+  color: rgba(247, 240, 232, 0.68);
+  font-weight: 600;
+}
+
+.panel-tab.active {
+  background: #ffcf8b;
+  color: #18222c;
+}
+
+.saved-player-card {
+  display: grid;
+  gap: 6px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  text-align: left;
+}
+
+.saved-player-card strong {
+  font-size: 1rem;
+}
+
+.saved-player-card span {
+  color: rgba(247, 240, 232, 0.62);
+  font-size: 0.85rem;
+}
+
+.saved-player-card:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .primary,
 .secondary {
   border: 0;
@@ -261,6 +336,19 @@ h1 {
   background: rgba(182, 52, 37, 0.16);
   border: 1px solid rgba(255, 129, 110, 0.35);
   color: #ffd9cf;
+}
+
+.selection-banner {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 207, 139, 0.12);
+  border: 1px solid rgba(255, 207, 139, 0.28);
+  color: #fff1d9;
+}
+
+.selection-banner strong {
+  color: #ffcf8b;
 }
 
 .final-panel {
@@ -301,6 +389,56 @@ h1 {
 
 .achievement-row {
   border: 1px solid rgba(255, 207, 139, 0.2);
+}
+
+.achievement-list {
+  display: grid;
+  gap: 12px;
+}
+
+.achievement-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.achievement-label {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.achievement-copy {
+  margin: 6px 0 0;
+}
+
+.achievement-options {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.point-chip {
+  min-width: 52px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font-weight: 700;
+}
+
+.point-chip.active {
+  border-color: rgba(255, 207, 139, 0.45);
+  background: #ffcf8b;
+  color: #18222c;
+}
+
+.point-chip-muted {
+  color: rgba(247, 240, 232, 0.74);
 }
 
 .role-panel {
@@ -497,6 +635,17 @@ h1 {
   font-weight: 700;
   min-width: 22px;
   text-align: center;
+}
+
+.count-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.count-stepper-wide {
+  margin-top: 10px;
 }
 
 /* Result form */

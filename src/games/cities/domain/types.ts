@@ -2,7 +2,8 @@ export interface ScoringCard {
   id: string;
   name: string;
   city?: string;
-  description?: string;
+  vpValue: number | string;
+  perUnit: string;
 }
 
 export interface ScoringBoardsInput {

@@ -1,49 +1,131 @@
 import type { ScoringCard } from "./types";
 
-export const CITIES = [
-  "Sydney",
-  "Venice",
-  "New York",
-  "Barcelona",
-  "Rio",
-  "Lisbon",
-  "Mexico City",
-  "Buenos Aires"
+export interface CityAchievementSection {
+  label: string;
+  points: readonly number[];
+}
+
+export interface CityOption {
+  id: string;
+  label: string;
+  skyline: string;
+  achievementSections: readonly CityAchievementSection[];
+}
+
+export const CITY_OPTIONS: readonly CityOption[] = [
+  {
+    id: "Lisbon",
+    label: "Lisbon",
+    skyline: "LI",
+    achievementSections: [
+      { label: "Cultural Centre", points: [5, 3, 1] },
+      { label: "Beautiful Parks", points: [6, 4, 2] },
+      { label: "Neighbourhoods", points: [7, 5, 3] }
+    ]
+  },
+  {
+    id: "Venice",
+    label: "Venice",
+    skyline: "VE",
+    achievementSections: [
+      { label: "Waterside Buildings", points: [5, 3, 1] },
+      { label: "Grand Canal", points: [6, 4, 2] },
+      { label: "Bridges", points: [7, 5, 3] }
+    ]
+  },
+  {
+    id: "Sydney",
+    label: "Sydney",
+    skyline: "SY",
+    achievementSections: [
+      { label: "Botanic Gardens", points: [5, 3, 1] },
+      { label: "Harbour City", points: [6, 4, 2] },
+      { label: "Circular Quay", points: [7, 5, 3] }
+    ]
+  },
+  {
+    id: "Buenos Aires",
+    label: "Buenos Aires",
+    skyline: "BA",
+    achievementSections: [
+      { label: "Avenida 9 De Julio", points: [5, 3, 1] },
+      { label: "Lago de Regatas", points: [6, 4, 2] },
+      { label: "Plaza de Mayo", points: [7, 5, 3] }
+    ]
+  },
+  {
+    id: "Mexico City",
+    label: "Mexico City",
+    skyline: "MC",
+    achievementSections: [
+      { label: "Maintenance of Xochimilco", points: [5, 3, 1] },
+      { label: "Chapultepec", points: [6, 4, 2] },
+      { label: "Historic Downtown", points: [7, 5, 3] }
+    ]
+  },
+  {
+    id: "Rio de Janeiro",
+    label: "Rio de Janeiro",
+    skyline: "RJ",
+    achievementSections: [
+      { label: "Guanabara Bay", points: [5, 3, 1] },
+      { label: "Centro", points: [6, 4, 2] },
+      { label: "Beachside Living", points: [7, 5, 3] }
+    ]
+  },
+  {
+    id: "New York City",
+    label: "New York City",
+    skyline: "NY",
+    achievementSections: [
+      { label: "Central Park", points: [5, 3, 1] },
+      { label: "Avenues", points: [6, 4, 2] },
+      { label: "Skyscrapers", points: [7, 5, 3] }
+    ]
+  },
+  {
+    id: "Barcelona",
+    label: "Barcelona",
+    skyline: "BC",
+    achievementSections: [
+      { label: "Eixample", points: [5, 3, 1] },
+      { label: "Barceloneta Beach", points: [6, 4, 2] },
+      { label: "Ciutadella Park", points: [7, 5, 3] }
+    ]
+  }
 ] as const;
 
+export const CITIES = CITY_OPTIONS.map((city) => city.id);
+
 const SCORING_CARD_NAMES_AND_DESCRIPTIONS = [
-  { name: "Factories", description: "2 VP per blue exactly 2 high" },
-  { name: "Liveable City", description: "2 VP per set of red, green, blue, yellow of any size" },
-  { name: "House", description: "1 VP per yellow exactly 1 building high" },
-  { name: "Hotels", description: "4 VP per yellow exactly 3 building high" },
-  { name: "Restaurants", description: "1 VP per red exactly 1 building high" },
-  { name: "Schools", description: "Rule text to be finalized" },
-  { name: "Parkland", description: "Rule text to be finalized" },
-  { name: "Corporate Tower", description: "Rule text to be finalized" },
-  { name: "Museum", description: "Rule text to be finalized" },
-  { name: "Localbusiness", description: "Rule text to be finalized" },
-  { name: "Bay", description: "Rule text to be finalized" },
-  { name: "Historic Building", description: "Rule text to be finalized" },
-  { name: "Famous Building", description: "Rule text to be finalized" },
-  { name: "Parks", description: "Rule text to be finalized" },
-  { name: "Lakes", description: "Rule text to be finalized" },
-  { name: "Aparmtent Building", description: "Rule text to be finalized" },
-  { name: "Residential Tower", description: "Rule text to be finalized" },
-  { name: "Governemnt Towers", description: "Rule text to be finalized" },
-  { name: "Malls", description: "Rule text to be finalized" },
-  { name: "Deaprtment Stores", description: "Rule text to be finalized" },
-  { name: "Art Galleries", description: "Rule text to be finalized" },
-  { name: "Office Buildings", description: "Rule text to be finalized" }
+  { name: "Factories", vpValue: 2, perUnit: "blue buildings exactly 2 high" },
+  { name: "Liveable City", vpValue: 2, perUnit: "sets of red, green, blue, yellow of any size" },
+  { name: "House", vpValue: 1, perUnit: "yellow buildings exactly 1 high" },
+  { name: "Hotels", vpValue: 4, perUnit: "yellow buildings exactly 3 high" },
+  { name: "Restaurants", vpValue: 1, perUnit: "red buildings exactly 1 high" },
+  { name: "Schools", vpValue: 1, perUnit: "green buildings exactly 1 high" },
+  { name: "Retail Towers", vpValue: 6, perUnit: "red buildings exactly 4 high" },
+  { name: "Parkland", vpValue: "1/2", perUnit: "park spaces in your largest park" },
+  { name: "Corporate Tower", vpValue: 6, perUnit: "blue buildings exactly 4 high" },
+  { name: "Museum", vpValue: 1, perUnit: "buildings of any colour exactly 2 high" },
+  { name: "Local Business", vpValue: 1, perUnit: "blue buildings exactly 1 high" },
+  { name: "Bay", vpValue: "1/2", perUnit: "water spaces in your largest water" },
+  { name: "Historic Building", vpValue: 1, perUnit: "buildings of any colour exactly 2 high" },
+  { name: "Famous Building", vpValue: 2, perUnit: "buildings of any colour exactly 3 high" },
+  { name: "Parks", vpValue: 1, perUnit: "separate park areas" },
+  { name: "Lakes", vpValue: 1, perUnit: "separate water areas" },
+  { name: "Apartment Building", vpValue: 2, perUnit: "yellow buildings exactly 2 high" },
+  { name: "Residential Tower", vpValue: 6, perUnit: "yellow buildings exactly 4 high" },
+  { name: "Government Towers", vpValue: 6, perUnit: "green buildings exactly 4 high" },
+  { name: "Malls", vpValue: 4, perUnit: "red buildings exactly 3 high" },
+  { name: "Department Stores", vpValue: 2, perUnit: "red buildings exactly 2 high" },
+  { name: "Art Galleries", vpValue: 4, perUnit: "green buildings exactly 3 high" },
+  { name: "Office Buildings", vpValue: 4, perUnit: "blue buildings exactly 3 high" }
 ] as const;
 
 export const SCORING_CARD_LIBRARY: ScoringCard[] = SCORING_CARD_NAMES_AND_DESCRIPTIONS.map((card, index) => ({
   id: `Card ${index + 1}`,
   name: card.name,
-  description: card.description
-}));
-
-export const CITY_OPTIONS = CITIES.map((city) => ({
-  id: city,
-  label: city,
-  skyline: city.slice(0, 2).toUpperCase()
+  vpValue: card.vpValue,
+  perUnit: card.perUnit
 }));

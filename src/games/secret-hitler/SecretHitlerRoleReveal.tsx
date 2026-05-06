@@ -1,10 +1,14 @@
 import { useMemo, useState } from "react";
+import { getGameHistorian } from "../../app/gameRegistry";
+import { recordGamePlayerStats } from "../../app/gamePlayerStats";
+import { deletePlayerName, loadSavedPlayerNames, savePlayerNames } from "../../app/players";
+import { getPlayerSelectionStats } from "../../app/playerSelectionStats";
 import { assignRoles, getRoleView, type SecretPlayer } from "./logic";
 
 type Step = "count" | "names" | "ready" | "buffer" | "reveal" | "summary";
 type WinningTeam = "liberal" | "fascist";
+type FrontTab = "setup" | "history";
 
-const STORAGE_KEY = "secret-hitler-players-v1";
 const HISTORY_STORAGE_KEY = "secret-hitler-history-v1";
 const MAX_HISTORY_ITEMS = 20;
 
@@ -17,38 +21,6 @@ interface GameHistoryEntry {
   declaredHitler: string;
   liberalPolicies: number;
   fascistPolicies: number;
-}
-
-function loadSavedNames(): string[] {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return [];
-    }
-
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-
-    return parsed.filter((name): name is string => typeof name === "string" && name.trim().length > 0);
-  } catch {
-    return [];
-  }
-}
-
-function saveNames(names: string[]) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  const existing = loadSavedNames();
-  const merged = Array.from(new Set([...existing, ...names.map((name) => name.trim())])).filter(Boolean);
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
 }
 
 function loadHistory(): GameHistoryEntry[] {
@@ -102,7 +74,7 @@ function SecretHitlerRoleReveal({ onBackHome }: { onBackHome: () => void }) {
   const [playerCount, setPlayerCount] = useState<number>(5);
   const [selectedNames, setSelectedNames] = useState<string[]>([]);
   const [nameInput, setNameInput] = useState<string>("");
-  const [savedNames, setSavedNames] = useState<string[]>(() => loadSavedNames());
+  const [savedNames, setSavedNames] = useState<string[]>(() => loadSavedPlayerNames());
   const [players, setPlayers] = useState<SecretPlayer[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [winner, setWinner] = useState<WinningTeam>("liberal");
@@ -110,6 +82,7 @@ function SecretHitlerRoleReveal({ onBackHome }: { onBackHome: () => void }) {
   const [liberalPolicies, setLiberalPolicies] = useState<number>(0);
   const [fascistPolicies, setFascistPolicies] = useState<number>(0);
   const [history, setHistory] = useState<GameHistoryEntry[]>(() => loadHistory());
+  const [frontTab, setFrontTab] = useState<FrontTab>("setup");
 
   const currentPlayer = players[currentIndex];
   const liberalTeam = useMemo(
@@ -121,29 +94,39 @@ function SecretHitlerRoleReveal({ onBackHome }: { onBackHome: () => void }) {
     [players]
   );
   const actualHitler = useMemo(() => players.find((player) => player.role === "hitler")?.name ?? "", [players]);
+  const historian = useMemo(() => getGameHistorian("secret-hitler"), []);
 
   const playerStats = useMemo(() => {
-    const map = new Map<string, { wins: number; losses: number; hitlerCount: number }>();
-    for (const entry of history) {
-      for (const name of entry.players) {
-        if (!map.has(name)) map.set(name, { wins: 0, losses: 0, hitlerCount: 0 });
-        const stat = map.get(name)!;
-        const onLiberal = entry.liberalTeam.includes(name);
-        const won = (onLiberal && entry.winner === "liberal") || (!onLiberal && entry.winner === "fascist");
-        if (won) stat.wins++; else stat.losses++;
-        if (entry.declaredHitler === name) stat.hitlerCount++;
-      }
+    if (!historian) {
+      return [];
     }
-    return Array.from(map.entries())
-      .map(([name, s]) => ({ name, ...s, games: s.wins + s.losses }))
+
+    const statsHistory = historian.loadHistory();
+    return savedNames
+      .map((name) => {
+        const stats = historian.getPlayerStats(name, statsHistory);
+        const hitlerCount = typeof stats.stats["Hitler Count"] === "number" ? stats.stats["Hitler Count"] : 0;
+        return {
+          name,
+          wins: stats.wins,
+          losses: stats.losses,
+          hitlerCount,
+          games: stats.gamesPlayed
+        };
+      })
+      .filter((entry) => entry.games > 0)
       .sort((a, b) => b.games - a.games);
-  }, [history]);
+  }, [historian, savedNames, history]);
   const roleView = useMemo(() => {
     if (!currentPlayer) {
       return null;
     }
     return getRoleView(players, currentIndex);
   }, [players, currentIndex, currentPlayer]);
+  const selectionStats = useMemo(
+    () => getPlayerSelectionStats("secret-hitler", savedNames),
+    [savedNames, history]
+  );
 
   const addName = (rawName: string) => {
     const name = rawName.trim();
@@ -170,7 +153,7 @@ function SecretHitlerRoleReveal({ onBackHome }: { onBackHome: () => void }) {
     setWinner("liberal");
     setLiberalPolicies(0);
     setFascistPolicies(0);
-    saveNames(selectedNames);
+    savePlayerNames(selectedNames);
     setStep("buffer");
   };
 
@@ -201,17 +184,25 @@ function SecretHitlerRoleReveal({ onBackHome }: { onBackHome: () => void }) {
     };
 
     saveHistoryEntry(entry);
+    recordGamePlayerStats({
+      gameId: "secret-hitler",
+      players: entry.players,
+      winners: entry.winner === "liberal" ? entry.liberalTeam : entry.fascistTeam,
+      numericStatsByPlayer: {
+        [entry.declaredHitler]: { hitlerCount: 1 }
+      }
+    });
     setHistory((items) => [entry, ...items].slice(0, MAX_HISTORY_ITEMS));
   };
 
   const deletePlayer = (name: string) => {
+    if (typeof window !== "undefined" && !window.confirm(`Delete ${name} from saved players? This will not remove past game results.`)) {
+      return;
+    }
+
+    deletePlayerName(name);
     const next = savedNames.filter((n) => n !== name);
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     setSavedNames(next);
-    // also purge all history entries that include this player
-    const nextHistory = history.filter((e) => !e.players.includes(name));
-    window.localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(nextHistory));
-    setHistory(nextHistory);
   };
 
   const deleteGame = (playedAt: string) => {
@@ -235,8 +226,9 @@ function SecretHitlerRoleReveal({ onBackHome }: { onBackHome: () => void }) {
     setLiberalPolicies(0);
     setFascistPolicies(0);
     setNameInput("");
-    setSavedNames(loadSavedNames());
+    setSavedNames(loadSavedPlayerNames());
     setHistory(loadHistory());
+    setFrontTab("setup");
   };
 
   return (
@@ -255,48 +247,71 @@ function SecretHitlerRoleReveal({ onBackHome }: { onBackHome: () => void }) {
 
         {step === "count" ? (
           <section className="panel" aria-labelledby="count-heading">
-            <h2 id="count-heading">How many players?</h2>
-            <div className="game-grid">
-              {[5, 6, 7, 8, 9, 10].map((count) => (
-                <button key={count} type="button" className={`city-tile${playerCount === count ? " selected" : ""}`} onClick={() => setPlayerCount(count)}>
-                  <span className="city-code">{count}</span>
-                  <span>{count} players</span>
-                </button>
-              ))}
-            </div>
-            <div className="actions">
-              <button type="button" className="primary" onClick={() => setStep("names")}>
-                Continue
+            <div className="panel-tabs" role="tablist" aria-label="Secret Hitler front page tabs">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={frontTab === "setup"}
+                className={`panel-tab${frontTab === "setup" ? " active" : ""}`}
+                onClick={() => setFrontTab("setup")}
+              >
+                New game
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={frontTab === "history"}
+                className={`panel-tab${frontTab === "history" ? " active" : ""}`}
+                onClick={() => setFrontTab("history")}
+              >
+                Past games
               </button>
             </div>
 
-            {playerStats.length > 0 ? (
+            {frontTab === "setup" ? (
               <>
-                <h3 className="section-subhead">Player stats</h3>
-                <div className="stats-table">
-                  <div className="stats-header">
-                    <span>Player</span>
-                    <span title="Games played">GP</span>
-                    <span title="Wins">W</span>
-                    <span title="Losses">L</span>
-                    <span title="Times as Hitler">🧔</span>
-                    <span />
-                  </div>
-                  {playerStats.map((s) => (
-                    <div key={s.name} className="stats-row">
-                      <span className="stats-name">{s.name}</span>
-                      <span className="stats-num">{s.games}</span>
-                      <span className="stats-num win-num">{s.wins}</span>
-                      <span className="stats-num loss-num">{s.losses}</span>
-                      <span className="stats-num hitler-num">{s.hitlerCount > 0 ? s.hitlerCount : "—"}</span>
-                      <button type="button" className="del-btn" title={`Delete ${s.name} and their game history`} onClick={() => deletePlayer(s.name)}>✕</button>
-                    </div>
+                <h2 id="count-heading">How many players?</h2>
+                <div className="game-grid">
+                  {[5, 6, 7, 8, 9, 10].map((count) => (
+                    <button key={count} type="button" className={`city-tile${playerCount === count ? " selected" : ""}`} onClick={() => setPlayerCount(count)}>
+                      <span className="city-code">{count}</span>
+                      <span>{count} players</span>
+                    </button>
                   ))}
                 </div>
-              </>
-            ) : null}
+                <div className="actions">
+                  <button type="button" className="primary" onClick={() => setStep("names")}>
+                    Continue
+                  </button>
+                </div>
 
-            {history.length > 0 ? (
+                {playerStats.length > 0 ? (
+                  <>
+                    <h3 className="section-subhead">Player stats</h3>
+                    <div className="stats-table">
+                      <div className="stats-header">
+                        <span>Player</span>
+                        <span title="Games played">GP</span>
+                        <span title="Wins">W</span>
+                        <span title="Losses">L</span>
+                        <span title="Times as Hitler">🧔</span>
+                        <span />
+                      </div>
+                      {playerStats.map((s) => (
+                        <div key={s.name} className="stats-row">
+                          <span className="stats-name">{s.name}</span>
+                          <span className="stats-num">{s.games}</span>
+                          <span className="stats-num win-num">{s.wins}</span>
+                          <span className="stats-num loss-num">{s.losses}</span>
+                          <span className="stats-num hitler-num">{s.hitlerCount > 0 ? s.hitlerCount : "—"}</span>
+                          <button type="button" className="del-btn" title={`Delete ${s.name} from saved players`} onClick={() => deletePlayer(s.name)}>✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : null}
+              </>
+            ) : history.length > 0 ? (
               <>
                 <div className="section-subhead-row">
                   <h3 className="section-subhead" style={{ margin: 0 }}>Recent games</h3>
@@ -326,7 +341,9 @@ function SecretHitlerRoleReveal({ onBackHome }: { onBackHome: () => void }) {
                   ))}
                 </div>
               </>
-            ) : null}
+            ) : (
+              <p className="support-copy">No Secret Hitler games saved yet.</p>
+            )}
           </section>
         ) : null}
 
@@ -362,15 +379,17 @@ function SecretHitlerRoleReveal({ onBackHome }: { onBackHome: () => void }) {
               {savedNames.length === 0 ? <p className="support-copy">No saved names yet.</p> : null}
               {savedNames.map((name) => {
                 const used = selectedNames.includes(name);
+                const stats = selectionStats.get(name);
                 return (
                   <button
                     key={name}
                     type="button"
-                    className="secondary"
+                    className="saved-player-card"
                     disabled={used || selectedNames.length >= playerCount}
                     onClick={() => addName(name)}
                   >
-                    {name}
+                    <strong>{name}</strong>
+                    <span>{stats && stats.gamesPlayed > 0 ? `${stats.wins} wins • ${stats.gamesPlayed} games` : "No Secret Hitler games yet"}</span>
                   </button>
                 );
               })}

@@ -1,8 +1,10 @@
 import { useState } from "react";
 import CitiesScoringGame from "./games/cities/CitiesScoringGame";
 import SecretHitlerRoleReveal from "./games/secret-hitler/SecretHitlerRoleReveal";
+import PlayersHub from "./app/PlayersHub";
+import "./app/registerHistorians"; // Ensure historians are registered on app load
 
-type GameRoute = "home" | "cities" | "secret-hitler";
+type GameRoute = "home" | "cities" | "secret-hitler" | "players";
 
 interface GameOption {
   id: string;
@@ -44,6 +46,10 @@ function App() {
     return <SecretHitlerRoleReveal onBackHome={() => setRoute("home")} />;
   }
 
+  if (route === "players") {
+    return <PlayersHub onBack={() => setRoute("home")} />;
+  }
+
   return (
     <main className="shell">
       <section className="hero-card">
@@ -54,6 +60,11 @@ function App() {
             Build one scoring companion per game in this workspace. Cities is ready now, and the rest can be
             added behind the same home screen.
           </p>
+          <div className="actions">
+            <button type="button" className="secondary" onClick={() => setRoute("players")}>
+              View Players
+            </button>
+          </div>
         </div>
 
         <section className="panel" aria-labelledby="games-heading">
@@ -66,11 +77,11 @@ function App() {
                 <p className="support-copy">{game.subtitle}</p>
                 {game.id === "cities" ? (
                   <button type="button" className="primary" onClick={() => setRoute("cities")}>
-                    Open Cities scorer
+                    Cities scorer
                   </button>
                 ) : game.id === "secret-hitler" ? (
                   <button type="button" className="primary" onClick={() => setRoute("secret-hitler")}>
-                    Open Secret Hitler reveal
+                    Reveal Secret Hitler roles
                   </button>
                 ) : (
                   <button type="button" className="secondary" disabled>

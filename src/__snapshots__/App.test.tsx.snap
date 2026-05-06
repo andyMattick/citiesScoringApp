@@ -57,7 +57,7 @@ exports[`App > renders the game hub screen 1`] = `
               class="primary"
               type="button"
             >
-              Open Cities scorer
+              Cities scorer
             </button>
           </article>
           <article
@@ -80,7 +80,7 @@ exports[`App > renders the game hub screen 1`] = `
               class="primary"
               type="button"
             >
-              Open Secret Hitler reveal
+              Secret Hitler roles
             </button>
           </article>
           <article
