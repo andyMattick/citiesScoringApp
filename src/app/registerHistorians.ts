@@ -7,10 +7,12 @@
 import { registerGameHistorian } from "./gameRegistry";
 import { SecretHitlerHistorian } from "../games/secret-hitler/historian";
 import { CitiesHistorian } from "../games/cities/historian";
+import { LongShotHistorian } from "../games/long-shot/historian";
 
 export function registerAllGameHistorians() {
   registerGameHistorian(SecretHitlerHistorian);
   registerGameHistorian(CitiesHistorian);
+  registerGameHistorian(LongShotHistorian);
 }
 
 // Auto-register on import (for convenience)

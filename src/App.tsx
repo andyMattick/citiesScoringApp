@@ -1,10 +1,11 @@
 import { useState } from "react";
 import CitiesScoringGame from "./games/cities/CitiesScoringGame";
+import LongShotGame from "./games/long-shot/LongShotGame";
 import SecretHitlerRoleReveal from "./games/secret-hitler/SecretHitlerRoleReveal";
 import PlayersHub from "./app/PlayersHub";
 import "./app/registerHistorians"; // Ensure historians are registered on app load
 
-type GameRoute = "home" | "cities" | "secret-hitler" | "players";
+type GameRoute = "home" | "cities" | "secret-hitler" | "long-shot" | "players";
 
 interface GameOption {
   id: string;
@@ -26,6 +27,12 @@ const GAME_OPTIONS: GameOption[] = [
     status: "available",
     subtitle: "Touch-only pass-the-phone role reveal"
   },
+  {
+    id: "long-shot",
+    name: "Long Shot: The Dice Game",
+    status: "available",
+    subtitle: "Dice roller and end-game scoring companion"
+  },
   { id: "ticket-to-ride", name: "Ticket to Ride", status: "coming-soon", subtitle: "Route and objective scoring" },
   { id: "cascadia", name: "Cascadia", status: "coming-soon", subtitle: "Habitat and wildlife scoring" },
   { id: "azul", name: "Azul", status: "coming-soon", subtitle: "Wall placement and penalty scoring" },
@@ -44,6 +51,10 @@ function App() {
 
   if (route === "secret-hitler") {
     return <SecretHitlerRoleReveal onBackHome={() => setRoute("home")} />;
+  }
+
+  if (route === "long-shot") {
+    return <LongShotGame onBackHome={() => setRoute("home")} />;
   }
 
   if (route === "players") {
@@ -82,6 +93,10 @@ function App() {
                 ) : game.id === "secret-hitler" ? (
                   <button type="button" className="primary" onClick={() => setRoute("secret-hitler")}>
                     Reveal Secret Hitler roles
+                  </button>
+                ) : game.id === "long-shot" ? (
+                  <button type="button" className="primary" onClick={() => setRoute("long-shot")}>
+                    Open Long Shot companion
                   </button>
                 ) : (
                   <button type="button" className="secondary" disabled>

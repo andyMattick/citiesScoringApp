@@ -24,6 +24,16 @@ exports[`App > renders the game hub screen 1`] = `
         >
           Build one scoring companion per game in this workspace. Cities is ready now, and the rest can be added behind the same home screen.
         </p>
+        <div
+          class="actions"
+        >
+          <button
+            class="secondary"
+            type="button"
+          >
+            View Players
+          </button>
+        </div>
       </div>
       <section
         aria-labelledby="games-heading"
@@ -80,7 +90,30 @@ exports[`App > renders the game hub screen 1`] = `
               class="primary"
               type="button"
             >
-              Secret Hitler roles
+              Reveal Secret Hitler roles
+            </button>
+          </article>
+          <article
+            class="game-card available"
+          >
+            <p
+              class="eyebrow"
+            >
+              Ready
+            </p>
+            <h3>
+              Long Shot: The Dice Game
+            </h3>
+            <p
+              class="support-copy"
+            >
+              Dice roller and end-game scoring companion
+            </p>
+            <button
+              class="primary"
+              type="button"
+            >
+              Open Long Shot companion
             </button>
           </article>
           <article
