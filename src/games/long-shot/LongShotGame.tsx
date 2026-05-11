@@ -47,6 +47,64 @@ interface DiceUiState {
 const HISTORY_STORAGE_KEY = "long-shot-history-v1";
 const MAX_HISTORY_ITEMS = 20;
 const PLAYER_COUNT_OPTIONS = [2, 3, 4, 5, 6, 7, 8] as const;
+const PLAYER_COLOR_THEMES = [
+  {
+    borderColor: "rgba(255, 207, 139, 0.55)",
+    bannerBackground: "linear-gradient(140deg, rgba(255, 207, 139, 0.24), rgba(255, 169, 77, 0.14))",
+    chipBackground: "rgba(255, 207, 139, 0.14)",
+    textColor: "#fff4e1",
+    labelColor: "rgba(255, 244, 225, 0.82)"
+  },
+  {
+    borderColor: "rgba(130, 206, 255, 0.56)",
+    bannerBackground: "linear-gradient(140deg, rgba(130, 206, 255, 0.23), rgba(92, 155, 196, 0.14))",
+    chipBackground: "rgba(130, 206, 255, 0.12)",
+    textColor: "#e8f6ff",
+    labelColor: "rgba(232, 246, 255, 0.82)"
+  },
+  {
+    borderColor: "rgba(154, 232, 168, 0.56)",
+    bannerBackground: "linear-gradient(140deg, rgba(154, 232, 168, 0.24), rgba(106, 188, 121, 0.14))",
+    chipBackground: "rgba(154, 232, 168, 0.12)",
+    textColor: "#ebffef",
+    labelColor: "rgba(235, 255, 239, 0.82)"
+  },
+  {
+    borderColor: "rgba(255, 174, 168, 0.56)",
+    bannerBackground: "linear-gradient(140deg, rgba(255, 174, 168, 0.24), rgba(224, 127, 114, 0.14))",
+    chipBackground: "rgba(255, 174, 168, 0.12)",
+    textColor: "#ffefed",
+    labelColor: "rgba(255, 239, 237, 0.82)"
+  },
+  {
+    borderColor: "rgba(228, 188, 255, 0.56)",
+    bannerBackground: "linear-gradient(140deg, rgba(228, 188, 255, 0.24), rgba(172, 126, 214, 0.14))",
+    chipBackground: "rgba(228, 188, 255, 0.12)",
+    textColor: "#f7ecff",
+    labelColor: "rgba(247, 236, 255, 0.82)"
+  },
+  {
+    borderColor: "rgba(255, 223, 135, 0.56)",
+    bannerBackground: "linear-gradient(140deg, rgba(255, 223, 135, 0.24), rgba(216, 178, 74, 0.14))",
+    chipBackground: "rgba(255, 223, 135, 0.12)",
+    textColor: "#fff7dd",
+    labelColor: "rgba(255, 247, 221, 0.82)"
+  },
+  {
+    borderColor: "rgba(133, 231, 219, 0.56)",
+    bannerBackground: "linear-gradient(140deg, rgba(133, 231, 219, 0.24), rgba(95, 180, 176, 0.14))",
+    chipBackground: "rgba(133, 231, 219, 0.12)",
+    textColor: "#e7fffc",
+    labelColor: "rgba(231, 255, 252, 0.82)"
+  },
+  {
+    borderColor: "rgba(255, 201, 152, 0.56)",
+    bannerBackground: "linear-gradient(140deg, rgba(255, 201, 152, 0.24), rgba(218, 150, 94, 0.14))",
+    chipBackground: "rgba(255, 201, 152, 0.12)",
+    textColor: "#fff1e5",
+    labelColor: "rgba(255, 241, 229, 0.82)"
+  }
+] as const;
 
 function createHelmetJerseySet(index: number): HelmetJerseySet {
   return {
@@ -157,6 +215,13 @@ function LongShotGame({ onBackHome }: { onBackHome: () => void }) {
   );
 
   const currentRollingPlayer = selectedNames[diceState.currentPlayerIndex] ?? players[diceState.currentPlayerIndex]?.name ?? "";
+  const currentPlayerTheme = PLAYER_COLOR_THEMES[diceState.currentPlayerIndex % PLAYER_COLOR_THEMES.length];
+  const rollingPlayerThemes = selectedNames.map((name, index) => ({
+    name,
+    index,
+    isCurrent: index === diceState.currentPlayerIndex,
+    theme: PLAYER_COLOR_THEMES[index % PLAYER_COLOR_THEMES.length]
+  }));
   const currentEntryPlayer = players[playerEntryIndex];
   const jockeyConventionActive = trackEvent.endgameEffectId === "jockey_convention";
   const standings = useMemo(
@@ -231,6 +296,8 @@ function LongShotGame({ onBackHome }: { onBackHome: () => void }) {
   const randomizeSetup = () => {
     setTrackEvent(randomItem(TRACK_EVENT_LIBRARY));
     setHorses(createRandomizedHorseSetup());
+    const randomPlayerIndex = selectedNames.length > 0 ? Math.floor(Math.random() * selectedNames.length) : 0;
+    setDiceState({ currentPlayerIndex: randomPlayerIndex });
   };
 
   const updateHorseCard = (horseId: number, cardId: string) => {
@@ -339,7 +406,6 @@ function LongShotGame({ onBackHome }: { onBackHome: () => void }) {
       <section className="hero-card">
         <div className="hero-copy">
           <p className="eyebrow">Long Shot companion</p>
-          <h1>Keep the dice moving, then score the table cleanly.</h1>
           <p className="lede">
             This Long Shot flow reuses your saved player roster, rolls the horse and movement dice, and captures
             the endgame scoring inputs once the race is over.
@@ -536,11 +602,14 @@ function LongShotGame({ onBackHome }: { onBackHome: () => void }) {
             <div className="selection-banner">
               <strong>{trackEvent.name}</strong>
               <div>{trackEvent.description}</div>
+              <div style={{ marginTop: 8 }}>
+                <strong>First player:</strong> {selectedNames[diceState.currentPlayerIndex] ?? "Not selected"}
+              </div>
             </div>
 
             <div className="actions">
               <button type="button" className="secondary" onClick={randomizeSetup}>
-                Randomize event and cards
+                Randomize event, cards, and first player
               </button>
             </div>
 
@@ -578,11 +647,39 @@ function LongShotGame({ onBackHome }: { onBackHome: () => void }) {
             <h2 id="long-shot-rolling-heading">Dice roller</h2>
             <p className="support-copy">Players move the physical race themselves. The app only tracks the current roll and whose turn it is.</p>
 
-            <div className="selection-banner">
-              <strong>Current player:</strong> {currentRollingPlayer || "Select players first"}
-              <div style={{ marginTop: 8 }}>
-                <strong>{trackEvent.name}</strong>: {trackEvent.description}
+            <div
+              className="rolling-player-banner"
+              role="status"
+              aria-live="polite"
+              style={{ borderColor: currentPlayerTheme.borderColor, background: currentPlayerTheme.bannerBackground }}
+            >
+              <span className="rolling-player-label" style={{ color: currentPlayerTheme.labelColor }}>Current player</span>
+              <strong className="rolling-player-name" style={{ color: currentPlayerTheme.textColor }}>
+                {currentRollingPlayer || "Select players first"}
+              </strong>
+            </div>
+
+            {rollingPlayerThemes.length > 0 ? (
+              <div className="rolling-player-strip" aria-label="Player turn colors">
+                {rollingPlayerThemes.map((entry) => (
+                  <span
+                    key={entry.name}
+                    className={entry.isCurrent ? "rolling-player-chip active" : "rolling-player-chip"}
+                    style={{
+                      borderColor: entry.theme.borderColor,
+                      background: entry.theme.chipBackground,
+                      color: entry.theme.textColor
+                    }}
+                  >
+                    {entry.index + 1}. {entry.name}
+                  </span>
+                ))}
               </div>
+            ) : null}
+
+            <div className="selection-banner">
+              <strong>{trackEvent.name}</strong>
+              <div>{trackEvent.description}</div>
             </div>
 
             <div className="game-grid" style={{ marginTop: 20 }}>
@@ -604,7 +701,7 @@ function LongShotGame({ onBackHome }: { onBackHome: () => void }) {
                 Next player
               </button>
               <button type="button" className="secondary" onClick={() => setStep("results")}>
-                Go to scoring
+                End the race!
               </button>
             </div>
           </section>

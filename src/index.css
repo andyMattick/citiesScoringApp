@@ -351,6 +351,53 @@ h1 {
   color: #ffcf8b;
 }
 
+.rolling-player-banner {
+  margin: 16px 0 0;
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 207, 139, 0.5);
+  background: linear-gradient(140deg, rgba(255, 207, 139, 0.2), rgba(92, 155, 196, 0.12));
+  display: grid;
+  gap: 6px;
+}
+
+.rolling-player-label {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+  color: rgba(255, 241, 217, 0.82);
+}
+
+.rolling-player-name {
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
+  line-height: 1.05;
+  color: #fff8ee;
+}
+
+.rolling-player-strip {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rolling-player-chip {
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  opacity: 0.8;
+}
+
+.rolling-player-chip.active {
+  opacity: 1;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
+}
+
 .final-panel {
   overflow: hidden;
 }

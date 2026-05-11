@@ -91,16 +91,7 @@ export interface LongShotScoringResult {
   playerScores: PlayerScoreBreakdown[];
 }
 
-const HORSE_NAMES = [
-  "Hoof Hustle",
-  "Silver Streak",
-  "Velvet Dash",
-  "Night Thunder",
-  "Pocket Rocket",
-  "Lucky Lantern",
-  "Backstretch Belle",
-  "Great Appreciation"
-] as const;
+const HORSE_NAMES = ["Horse 1", "Horse 2", "Horse 3", "Horse 4", "Horse 5", "Horse 6", "Horse 7", "Horse 8"] as const;
 
 export const MOVEMENT_DIE_FACES = [1, 2, 2, 2, 3, 3] as const;
 
@@ -108,20 +99,50 @@ export const TRACK_EVENT_LIBRARY: TrackEvent[] = [
   {
     id: "jockey-convention",
     name: "Jockey Convention",
-    description: "Each completed helmet and jersey set may score +7 at endgame instead of the in-race $5 option.",
+    description: "When completing a set, gain $5 immediately or circle the set and gain $7 at scoring.",
     hasEndgameEffect: true,
     endgameEffectId: "jockey_convention"
   },
   {
-    id: "regular-race-day",
-    name: "Regular Race Day",
-    description: "No additional endgame effect. Use the roller and score the table as normal.",
+    id: "muddy-tracks",
+    name: "Muddy Tracks",
+    description: "Movement restriction event. No endgame scoring effect is applied in the app.",
     hasEndgameEffect: false
   },
   {
-    id: "sunny-rail",
-    name: "Sunny Rail",
-    description: "A calm table reminder only. No endgame modifier is applied in the app.",
+    id: "lucky-number",
+    name: "Lucky Number",
+    description: "Gain $1 when horse die matches chosen number. No endgame scoring effect is applied in the app.",
+    hasEndgameEffect: false
+  },
+  {
+    id: "the-comeback-kid",
+    name: "The Comeback Kid",
+    description: "Last-place horse moves +1. No endgame scoring effect is applied in the app.",
+    hasEndgameEffect: false
+  },
+  {
+    id: "off-the-menu",
+    name: "Off the Menu",
+    description: "Remove -2/-2 and -3 concession bonuses. No endgame scoring effect is applied in the app.",
+    hasEndgameEffect: false
+  },
+  {
+    id: "bank-grand-opening",
+    name: "Bank Grand Opening",
+    description: "Alternate action: gain cash equal to the movement die. No endgame scoring effect is applied in the app.",
+    hasEndgameEffect: false
+  },
+  {
+    id: "narrow-track",
+    name: "Narrow Track",
+    description: "If ending on a 2-horse space, move +1. No endgame scoring effect is applied in the app.",
+    hasEndgameEffect: false
+  },
+  {
+    id: "new-concession",
+    name: "New Concession",
+    description: "Concessions can be marked on the event card. No endgame scoring effect is applied in the app.",
     hasEndgameEffect: false
   }
 ];
@@ -137,11 +158,46 @@ export const HORSE_CARD_OPTIONS_BY_HORSE: Record<number, HorseCard[]> = {
       description: "Owner scores +10 if they own 3 or more horses."
     },
     {
-      id: "horse-1-none",
+      id: "horse-1-chain-reaction",
       horseId: 1,
-      name: "No endgame effect",
+      name: "Chain Reaction",
       effectType: "none",
-      description: "No app-tracked endgame effect."
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-1-bettor-butter",
+      horseId: 1,
+      name: "Bettor Butter",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-1-rocket-boots",
+      horseId: 1,
+      name: "Rocket Boots",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-1-row-your-boat",
+      horseId: 1,
+      name: "Row your Boat",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-1-strung-along",
+      horseId: 1,
+      name: "Strung Along",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-1-out-of-alignment",
+      horseId: 1,
+      name: "Out of Alignment",
+      effectType: "none",
+      description: "No endgame scoring effect."
     }
   ],
   2: [
@@ -154,20 +210,97 @@ export const HORSE_CARD_OPTIONS_BY_HORSE: Record<number, HorseCard[]> = {
       description: "Owner loses 10 if horse 2 does not finish."
     },
     {
-      id: "horse-2-none",
+      id: "horse-2-dollar-menu",
       horseId: 2,
-      name: "No endgame effect",
+      name: "Dollar Menu",
       effectType: "none",
-      description: "No app-tracked endgame effect."
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-2-lemonade-stan",
+      horseId: 2,
+      name: "Lemonade Stan",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-2-silver-spoon",
+      horseId: 2,
+      name: "Silver Spoon",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-2-make-it-rain",
+      horseId: 2,
+      name: "Make it Rain",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-2-too-lucky",
+      horseId: 2,
+      name: "Too Lucky",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-2-favorite-snack",
+      horseId: 2,
+      name: "Favorite Snack",
+      effectType: "none",
+      description: "No endgame scoring effect."
     }
   ],
   3: [
     {
-      id: "horse-3-none",
+      id: "horse-3-spur-of-the-moment",
       horseId: 3,
-      name: "No endgame effect",
+      name: "Spur of the Moment",
       effectType: "none",
-      description: "No app-tracked endgame effect."
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-3-scatter-shot",
+      horseId: 3,
+      name: "Scatter Shot",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-3-cook-the-books",
+      horseId: 3,
+      name: "Cook the Books",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-3-receding-mare-line",
+      horseId: 3,
+      name: "Receding Mare Line",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-3-triple-scoop",
+      horseId: 3,
+      name: "Triple Scoop",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-3-show-me-the-money",
+      horseId: 3,
+      name: "Show Me the Money",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-3-pay-it-forward",
+      horseId: 3,
+      name: "Pay it Forward",
+      effectType: "none",
+      description: "No endgame scoring effect."
     }
   ],
   4: [
@@ -188,11 +321,39 @@ export const HORSE_CARD_OPTIONS_BY_HORSE: Record<number, HorseCard[]> = {
       description: "Owner scores 4 per marked horse on the card."
     },
     {
-      id: "horse-4-none",
+      id: "horse-4-double-crosser",
       horseId: 4,
-      name: "No endgame effect",
+      name: "Double Crosser",
       effectType: "none",
-      description: "No app-tracked endgame effect."
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-4-three-four-five",
+      horseId: 4,
+      name: "Three Four Five",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-4-into-thin-air",
+      horseId: 4,
+      name: "Into Thin Air",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-4-early-bird-special",
+      horseId: 4,
+      name: "Early Bird Special",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-4-mint-condition",
+      horseId: 4,
+      name: "Mint Condition",
+      effectType: "none",
+      description: "No endgame scoring effect."
     }
   ],
   5: [
@@ -221,37 +382,135 @@ export const HORSE_CARD_OPTIONS_BY_HORSE: Record<number, HorseCard[]> = {
       description: "Owner scores +10 if they have no completed helmet and jersey sets."
     },
     {
-      id: "horse-5-none",
+      id: "horse-5-five-leaf-clover",
       horseId: 5,
-      name: "No endgame effect",
+      name: "Five Leaf Clover",
       effectType: "none",
-      description: "No app-tracked endgame effect."
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-5-charley-horse",
+      horseId: 5,
+      name: "Charley Horse",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-5-the-sting",
+      horseId: 5,
+      name: "The Sting",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-5-fancy-hat",
+      horseId: 5,
+      name: "Fancy Hat",
+      effectType: "none",
+      description: "No endgame scoring effect."
     }
   ],
   6: [
     {
       id: "horse-6-partial-gear",
       horseId: 6,
-      name: "Partial Gear",
+      name: "Unnamed #6 Effect",
       effectType: "endgame",
       endgameEffectId: "horse6_partial_gear",
       description: "Owner scores 2 for each horse where they have only a jersey or only a helmet."
     },
     {
-      id: "horse-6-none",
+      id: "horse-6-equestrian-inception",
       horseId: 6,
-      name: "No endgame effect",
+      name: "Equestrian Inception",
       effectType: "none",
-      description: "No app-tracked endgame effect."
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-6-photo-finish",
+      horseId: 6,
+      name: "Photo Finish",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-6-miracle-worker",
+      horseId: 6,
+      name: "Miracle Worker",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-6-dirty-laundry",
+      horseId: 6,
+      name: "Dirty Laundry",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-6-partner-in-crime",
+      horseId: 6,
+      name: "Partner in Crime",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-6-night-mare",
+      horseId: 6,
+      name: "Night Mare",
+      effectType: "none",
+      description: "No endgame scoring effect."
     }
   ],
   7: [
     {
-      id: "horse-7-none",
+      id: "horse-7-bettor-safe-than-sorry",
       horseId: 7,
-      name: "No endgame effect",
+      name: "Bettor Safe than Sorry",
       effectType: "none",
-      description: "No app-tracked endgame effect."
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-7-jack-pot",
+      horseId: 7,
+      name: "Jack Pot",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-7-bread-line",
+      horseId: 7,
+      name: "Bread Line",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-7-line-your-pockets",
+      horseId: 7,
+      name: "Line Your Pockets",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-7-cheer-up-buttercup",
+      horseId: 7,
+      name: "Cheer Up Buttercup",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-7-sticky-fingers",
+      horseId: 7,
+      name: "Sticky Fingers",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-7-fair-play",
+      horseId: 7,
+      name: "Fair Play",
+      effectType: "none",
+      description: "No endgame scoring effect."
     }
   ],
   8: [
@@ -264,11 +523,46 @@ export const HORSE_CARD_OPTIONS_BY_HORSE: Record<number, HorseCard[]> = {
       description: "If horse 8 finishes, add 10 to its bet payout multiplier."
     },
     {
-      id: "horse-8-none",
+      id: "horse-8-product-placement",
       horseId: 8,
-      name: "No endgame effect",
+      name: "Product Placement",
       effectType: "none",
-      description: "No app-tracked endgame effect."
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-8-magic-hate-ball",
+      horseId: 8,
+      name: "Magic Hate Ball",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-8-purple-rein",
+      horseId: 8,
+      name: "Purple Rein",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-8-nitro-nellie",
+      horseId: 8,
+      name: "Nitro Nellie",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-8-donut-dollie",
+      horseId: 8,
+      name: "Donut Dollie",
+      effectType: "none",
+      description: "No endgame scoring effect."
+    },
+    {
+      id: "horse-8-you-bettor-you-bet",
+      horseId: 8,
+      name: "You Bettor, You Bet",
+      effectType: "none",
+      description: "No endgame scoring effect."
     }
   ]
 };
