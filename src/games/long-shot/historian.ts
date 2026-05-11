@@ -59,14 +59,21 @@ export const LongShotHistorian: GameHistorian = {
       return typeof score === "number" ? Math.max(best, score) : best;
     }, 0);
 
+    const firstCount  = storedStats?.numericStats.firstCount  ?? 0;
+    const secondCount = storedStats?.numericStats.secondCount ?? 0;
+    const thirdCount  = storedStats?.numericStats.thirdCount  ?? 0;
+
     return {
       gamesPlayed: playerGames,
       wins,
       losses,
       stats: {
         "Best Score": bestScore,
-        "Avg Score": avgScore,
-        "Win Rate": playerGames > 0 ? `${Math.round((wins / playerGames) * 100)}%` : "—"
+        "Avg Score":  avgScore,
+        "1st":        firstCount,
+        "2nd":        secondCount,
+        "3rd":        thirdCount,
+        "Win Rate":   playerGames > 0 ? `${Math.round((wins / playerGames) * 100)}%` : "—"
       }
     };
   },

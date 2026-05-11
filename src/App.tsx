@@ -2,10 +2,11 @@ import { useState } from "react";
 import CitiesScoringGame from "./games/cities/CitiesScoringGame";
 import LongShotGame from "./games/long-shot/LongShotGame";
 import SecretHitlerRoleReveal from "./games/secret-hitler/SecretHitlerRoleReveal";
+import FiveTribesGame from "./games/five-tribes/FiveTribesGame";
 import PlayersHub from "./app/PlayersHub";
 import "./app/registerHistorians"; // Ensure historians are registered on app load
 
-type GameRoute = "home" | "cities" | "secret-hitler" | "long-shot" | "players";
+type GameRoute = "home" | "cities" | "secret-hitler" | "long-shot" | "five-tribes" | "players";
 
 interface GameOption {
   id: string;
@@ -33,6 +34,12 @@ const GAME_OPTIONS: GameOption[] = [
     status: "available",
     subtitle: "Dice roller and end-game scoring companion"
   },
+  {
+    id: "five-tribes",
+    name: "Five Tribes",
+    status: "available",
+    subtitle: "Bid order, starting player randomizer, and full end-game scoring"
+  },
   { id: "ticket-to-ride", name: "Ticket to Ride", status: "coming-soon", subtitle: "Route and objective scoring" },
   { id: "cascadia", name: "Cascadia", status: "coming-soon", subtitle: "Habitat and wildlife scoring" },
   { id: "azul", name: "Azul", status: "coming-soon", subtitle: "Wall placement and penalty scoring" },
@@ -55,6 +62,10 @@ function App() {
 
   if (route === "long-shot") {
     return <LongShotGame onBackHome={() => setRoute("home")} />;
+  }
+
+  if (route === "five-tribes") {
+    return <FiveTribesGame onBackHome={() => setRoute("home")} />;
   }
 
   if (route === "players") {
@@ -97,6 +108,10 @@ function App() {
                 ) : game.id === "long-shot" ? (
                   <button type="button" className="primary" onClick={() => setRoute("long-shot")}>
                     Open Long Shot companion
+                  </button>
+                ) : game.id === "five-tribes" ? (
+                  <button type="button" className="primary" onClick={() => setRoute("five-tribes")}>
+                    Open Five Tribes scorer
                   </button>
                 ) : (
                   <button type="button" className="secondary" disabled>

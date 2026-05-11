@@ -367,7 +367,21 @@ function LongShotGame({ onBackHome }: { onBackHome: () => void }) {
       };
 
       const numericStatsByPlayer = Object.fromEntries(
-        result.playerScores.map((score) => [score.playerId, { totalScore: score.total }])
+        sortedScores.map((score, index) => {
+          let place = index + 1;
+          if (index > 0 && score.total === sortedScores[index - 1].total) {
+            place = sortedScores.findIndex((s) => s.total === score.total) + 1;
+          }
+          return [
+            score.playerId,
+            {
+              totalScore:  score.total,
+              firstCount:  place === 1 ? 1 : 0,
+              secondCount: place === 2 ? 1 : 0,
+              thirdCount:  place === 3 ? 1 : 0,
+            },
+          ];
+        })
       );
 
       recordGamePlayerStats({
