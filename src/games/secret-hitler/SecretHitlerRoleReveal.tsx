@@ -89,6 +89,7 @@ function SecretHitlerRoleReveal({ onBackHome }: { onBackHome: () => void }) {
   const fascistTeam = useMemo(() => players.filter(p => p.role !== "liberal").map(p => p.name), [players]);
   const actualHitler = useMemo(() => players.find(p => p.role === "hitler")?.name ?? "", [players]);
   const historian = useMemo(() => getGameHistorian("secret-hitler"), []);
+  const [failedElections, setFailedElections] = useState<number>(0);
 
   const playerStats = useMemo(() => {
     if (!historian) return [];
@@ -166,6 +167,25 @@ function SecretHitlerRoleReveal({ onBackHome }: { onBackHome: () => void }) {
     setLegislativeStep("idle");
   };
 
+const handleFailedElection = () => {
+  setGameMessage("3 failed elections! Drawing random policy...");
+
+  let currentDeck = reshuffleIfNeeded(deck);
+  if (currentDeck.length === 0) {
+    setGameMessage("Deck is empty.");
+    return;
+  }
+
+  const randomPolicy = currentDeck[0];
+  const remaining = currentDeck.slice(1);
+  setDeck(remaining);
+
+  setTimeout(() => {
+    enactPolicy(randomPolicy, true); // ignore special power
+    setFailedElections(0);
+  }, 800);
+};
+
   const reshuffleIfNeeded = (currentDeck: Policy[]) => {
     if (currentDeck.length >= 3) return currentDeck;
     const combined = [...currentDeck, ...discard];
@@ -216,7 +236,7 @@ function SecretHitlerRoleReveal({ onBackHome }: { onBackHome: () => void }) {
     setLegislativeStep("enacted");
   };
 
-const enactPolicy = (policy: Policy) => {
+const enactPolicy = (policy: Policy, ignorePower = false) => {
   let newLib = liberalPolicies;
   let newFas = fascistPolicies;
   let power: string | null = null;
@@ -227,7 +247,10 @@ const enactPolicy = (policy: Policy) => {
   } else {
     newFas = Math.min(6, fascistPolicies + 1);
     setFascistPolicies(newFas);
-    power = getFascistPowerDescription(players.length, newFas);
+    
+    if (!ignorePower) {
+      power = getFascistPowerDescription(players.length, newFas);
+    }
   }
 
   setLastEnacted({ policy, power });
@@ -521,9 +544,10 @@ const revealFaction = (name: string) => {
         {step === "inGame" && (
           <section className="panel">
             <h2>In-Game — Legislative Phase</h2>
+            <button type="button" className="secondary" onClick={handleFailedElection}>3 Failed Elections (test)</button>
             <p className="support-copy">{gameMessage}</p>
 
-            <div><strong>President:</strong> {currentPresident?.name}</div>
+            <div><strong>Who is President?:</strong> {currentPresident?.name}</div>
 
             <h3>Players (tap to reveal faction)</h3>
             <div className="game-grid">
@@ -583,7 +607,13 @@ const revealFaction = (name: string) => {
             <div className="actions">
               <button type="button" className="secondary" onClick={saveGameResult}>Save Result</button>
               <button type="button" className="primary" onClick={() => reset(true)}>Play Again with Same Players</button>
-              <button type="button" className="primary" onClick={reset}>New Game</button>
+              <button 
+                type="button" 
+                className="primary" 
+                onClick={() => reset(false)}
+              >
+                New Game
+              </button>
             </div>
           </section>
         ) : null}

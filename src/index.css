@@ -1009,3 +1009,43 @@ h1 {
     padding: 18px;
   }
 }
+
+/* In-game improvements */
+.in-game-panel {
+  background: #1f2937;
+  color: #e5e7eb;
+}
+
+.policy-card {
+  padding: 12px 20px;
+  margin: 8px;
+  border-radius: 8px;
+  font-weight: bold;
+  min-width: 100px;
+}
+
+.policy-card.fascist {
+  background: #991b1b;
+  color: white;
+}
+
+.policy-card.liberal {
+  background: #1e40af;
+  color: white;
+}
+
+.special-power-alert {
+  background: #78350f;
+  color: #fbbf24;
+  padding: 12px;
+  border-radius: 8px;
+  margin: 12px 0;
+  font-weight: bold;
+}
+
+.player-card {
+  padding: 12px;
+  background: #374151;
+  border-radius: 8px;
+  text-align: center;
+}
