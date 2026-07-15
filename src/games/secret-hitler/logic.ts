@@ -5,9 +5,62 @@ export interface SecretPlayer {
   role: SecretRole;
 }
 
+export type Policy = "liberal" | "fascist";
+
 export interface RoleDistribution {
   fascists: number;
   hitler: 1;
+}
+
+export function getPlayerFaction(player: SecretPlayer): "Liberal" | "Fascist" {
+  return player.role === "liberal" ? "Liberal" : "Fascist";
+}
+
+export function createPolicyDeck(): Policy[] {
+  return [
+    ...Array(6).fill("liberal" as Policy),
+    ...Array(11).fill("fascist" as Policy),
+  ];
+}
+
+export function shufflePolicies<T>(items: T[]): T[] {
+  const next = [...items];
+  for (let i = next.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [next[i], next[j]] = [next[j], next[i]];
+  }
+  return next;
+}
+
+export function drawPolicies(deck: Policy[], count: number): { drawn: Policy[]; remaining: Policy[] } {
+  if (deck.length < count) {
+    throw new Error(`Not enough policies. Need ${count}, have ${deck.length}. Reshuffle discard first.`);
+  }
+  const drawn = deck.slice(0, count);
+  const remaining = deck.slice(count);
+  return { drawn, remaining };
+}
+
+// Helper for special power triggers (based on player count and fascist policy count)
+export function getFascistPowerDescription(playerCount: number, fascistPolicies: number): string | null {
+  if (fascistPolicies === 0) return null;
+
+  if (playerCount <= 6) {
+    if (fascistPolicies === 3) return "President examines top 3 cards and puts them back in same order";
+    if (fascistPolicies === 4 || fascistPolicies === 5) return "President may kill a player";
+    if (fascistPolicies >= 5) return "Veto power unlocked";
+  } else if (playerCount <= 8) {
+    if (fascistPolicies === 2) return "President may investigate a player";
+    if (fascistPolicies === 3) return "President picks next President";
+    if (fascistPolicies === 4 || fascistPolicies === 5) return "President may kill a player";
+    if (fascistPolicies >= 5) return "Veto power unlocked";
+  } else { // 9-10
+    if (fascistPolicies === 1) return "President may investigate a player";
+    if (fascistPolicies === 3) return "President picks next President";
+    if (fascistPolicies === 4 || fascistPolicies === 5) return "President may kill a player";
+    if (fascistPolicies >= 5) return "Veto power unlocked";
+  }
+  return null;
 }
 
 export function getRoleDistribution(playerCount: number): RoleDistribution {

@@ -3,11 +3,22 @@ import { getGameHistorian } from "../../app/gameRegistry";
 import { recordGamePlayerStats } from "../../app/gamePlayerStats";
 import { deletePlayerName, loadSavedPlayerNames, savePlayerNames } from "../../app/players";
 import { getPlayerSelectionStats } from "../../app/playerSelectionStats";
-import { assignRoles, getRoleView, type SecretPlayer } from "./logic";
+import {
+  assignRoles,
+  getRoleView,
+  type SecretPlayer,
+  type Policy,
+  getPlayerFaction,
+  createPolicyDeck,
+  shufflePolicies,
+  drawPolicies,
+  getFascistPowerDescription,
+} from "./logic";
 
-type Step = "count" | "names" | "ready" | "buffer" | "reveal" | "summary";
+type Step = "count" | "names" | "ready" | "buffer" | "reveal" | "inGame" | "summary";
 type WinningTeam = "liberal" | "fascist";
 type FrontTab = "setup" | "history";
+type LegislativeStep = "idle" | "drawn" | "chancellorSelect" | "chancellorChoose" | "enacted";
 
 const HISTORY_STORAGE_KEY = "secret-hitler-history-v1";
 const MAX_HISTORY_ITEMS = 20;
@@ -21,49 +32,24 @@ interface GameHistoryEntry {
   declaredHitler: string;
   liberalPolicies: number;
   fascistPolicies: number;
+  killedPlayers: string[];
 }
 
 function loadHistory(): GameHistoryEntry[] {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
+  if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(HISTORY_STORAGE_KEY);
-    if (!raw) {
-      return [];
-    }
-
+    if (!raw) return [];
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-
-    return parsed.slice(0, MAX_HISTORY_ITEMS).filter((entry): entry is GameHistoryEntry => {
-      if (!entry || typeof entry !== "object") {
-        return false;
-      }
-      return (
-        typeof entry.playedAt === "string" &&
-        Array.isArray(entry.players) &&
-        Array.isArray(entry.liberalTeam) &&
-        Array.isArray(entry.fascistTeam) &&
-        (entry.winner === "liberal" || entry.winner === "fascist") &&
-        typeof entry.declaredHitler === "string" &&
-        typeof entry.liberalPolicies === "number" &&
-        typeof entry.fascistPolicies === "number"
-      );
-    });
+    if (!Array.isArray(parsed)) return [];
+    return parsed.slice(0, MAX_HISTORY_ITEMS);
   } catch {
     return [];
   }
 }
 
 function saveHistoryEntry(entry: GameHistoryEntry) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
+  if (typeof window === "undefined") return;
   const current = loadHistory();
   const next = [entry, ...current].slice(0, MAX_HISTORY_ITEMS);
   window.localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(next));
@@ -84,71 +70,64 @@ function SecretHitlerRoleReveal({ onBackHome }: { onBackHome: () => void }) {
   const [history, setHistory] = useState<GameHistoryEntry[]>(() => loadHistory());
   const [frontTab, setFrontTab] = useState<FrontTab>("setup");
 
+  // In-Game State
+  const [deck, setDeck] = useState<Policy[]>([]);
+  const [discard, setDiscard] = useState<Policy[]>([]);
+  const [currentPresidentIndex, setCurrentPresidentIndex] = useState<number>(0);
+  const [currentChancellorIndex, setCurrentChancellorIndex] = useState<number | null>(null);
+  const [lastPresidentIndex, setLastPresidentIndex] = useState<number | null>(null);
+  const [lastChancellorIndex, setLastChancellorIndex] = useState<number | null>(null);
+  const [drawnPolicies, setDrawnPolicies] = useState<Policy[]>([]);
+  const [legislativeStep, setLegislativeStep] = useState<LegislativeStep>("idle");
+  const [killedPlayers, setKilledPlayers] = useState<Set<string>>(new Set());
+  const [factionReveals, setFactionReveals] = useState<Record<string, "Liberal" | "Fascist">>({});
+  const [lastEnacted, setLastEnacted] = useState<{ policy: Policy; power?: string | null } | null>(null);
+  const [gameMessage, setGameMessage] = useState<string>("");
+
   const currentPlayer = players[currentIndex];
-  const liberalTeam = useMemo(
-    () => players.filter((player) => player.role === "liberal").map((player) => player.name),
-    [players]
-  );
-  const fascistTeam = useMemo(
-    () => players.filter((player) => player.role !== "liberal").map((player) => player.name),
-    [players]
-  );
-  const actualHitler = useMemo(() => players.find((player) => player.role === "hitler")?.name ?? "", [players]);
+  const liberalTeam = useMemo(() => players.filter(p => p.role === "liberal").map(p => p.name), [players]);
+  const fascistTeam = useMemo(() => players.filter(p => p.role !== "liberal").map(p => p.name), [players]);
+  const actualHitler = useMemo(() => players.find(p => p.role === "hitler")?.name ?? "", [players]);
   const historian = useMemo(() => getGameHistorian("secret-hitler"), []);
 
   const playerStats = useMemo(() => {
-    if (!historian) {
-      return [];
-    }
-
+    if (!historian) return [];
     const statsHistory = historian.loadHistory();
     return savedNames
       .map((name) => {
         const stats = historian.getPlayerStats(name, statsHistory);
         const hitlerCount = typeof stats.stats["Hitler Count"] === "number" ? stats.stats["Hitler Count"] : 0;
-        return {
-          name,
-          wins: stats.wins,
-          losses: stats.losses,
-          hitlerCount,
-          games: stats.gamesPlayed
-        };
+        return { name, wins: stats.wins, losses: stats.losses, hitlerCount, games: stats.gamesPlayed };
       })
-      .filter((entry) => entry.games > 0)
+      .filter(entry => entry.games > 0)
       .sort((a, b) => b.games - a.games);
   }, [historian, savedNames, history]);
-  const roleView = useMemo(() => {
-    if (!currentPlayer) {
-      return null;
-    }
-    return getRoleView(players, currentIndex);
-  }, [players, currentIndex, currentPlayer]);
-  const selectionStats = useMemo(
-    () => getPlayerSelectionStats("secret-hitler", savedNames),
-    [savedNames, history]
+
+  const roleView = useMemo(() => currentPlayer ? getRoleView(players, currentIndex) : null, [players, currentIndex, currentPlayer]);
+  const selectionStats = useMemo(() => getPlayerSelectionStats("secret-hitler", savedNames), [savedNames, history]);
+
+  const currentPresident = players[currentPresidentIndex];
+  const availableChancellors = players.filter((p, i) => 
+    i !== currentPresidentIndex && 
+    !killedPlayers.has(p.name) &&
+    i !== lastPresidentIndex && 
+    i !== lastChancellorIndex
   );
 
   const addName = (rawName: string) => {
     const name = rawName.trim();
-    if (!name || selectedNames.length >= playerCount) {
-      return;
-    }
-
-    setSelectedNames((names) => [...names, name]);
-    if (!savedNames.includes(name)) {
-      setSavedNames((names) => [name, ...names]);
-    }
+    if (!name || selectedNames.length >= playerCount) return;
+    setSelectedNames(names => [...names, name]);
+    if (!savedNames.includes(name)) setSavedNames(names => [name, ...names]);
   };
 
-  const removeName = (index: number) => {
-    setSelectedNames((names) => names.filter((_, nameIndex) => nameIndex !== index));
-  };
+  const removeName = (index: number) => setSelectedNames(names => names.filter((_, i) => i !== index));
 
   const beginReveal = () => {
     const assigned = assignRoles(selectedNames);
     setPlayers(assigned);
     setCurrentIndex(0);
-    const hitler = assigned.find((player) => player.role === "hitler")?.name ?? "";
+    const hitler = assigned.find(p => p.role === "hitler")?.name ?? "";
     setDeclaredHitler(hitler);
     setWinner("liberal");
     setLiberalPolicies(0);
@@ -159,54 +138,193 @@ function SecretHitlerRoleReveal({ onBackHome }: { onBackHome: () => void }) {
 
   const goNextPlayer = () => {
     if (currentIndex >= players.length - 1) {
-      setStep("summary");
+      initializeInGame();
+      setStep("inGame");
       return;
     }
-
-    setCurrentIndex((index) => index + 1);
+    setCurrentIndex(index => index + 1);
     setStep("buffer");
   };
 
-  const saveGameResult = () => {
-    if (!players.length || !declaredHitler) {
+  const initializeInGame = () => {
+    const newDeck = shufflePolicies(createPolicyDeck());
+    setDeck(newDeck);
+    setDiscard([]);
+    setLiberalPolicies(0);
+    setFascistPolicies(0);
+    setKilledPlayers(new Set());
+    setFactionReveals({});
+    setLastEnacted(null);
+    setLastPresidentIndex(null);
+    setLastChancellorIndex(null);
+    setGameMessage("Game started! Random first President selected.");
+
+    const randomIndex = Math.floor(Math.random() * players.length);
+    setCurrentPresidentIndex(randomIndex);
+    setCurrentChancellorIndex(null);
+    setDrawnPolicies([]);
+    setLegislativeStep("idle");
+  };
+
+  const reshuffleIfNeeded = (currentDeck: Policy[]) => {
+    if (currentDeck.length >= 3) return currentDeck;
+    const combined = [...currentDeck, ...discard];
+    const newDeck = shufflePolicies(combined);
+    setDeck(newDeck);
+    setDiscard([]);
+    setGameMessage("Deck reshuffled from discard pile.");
+    return newDeck;
+  };
+
+  const drawForPresident = () => {
+    let currentDeck = reshuffleIfNeeded(deck);
+    if (currentDeck.length < 3) {
+      setGameMessage("Not enough policies.");
       return;
     }
+    const { drawn, remaining } = drawPolicies(currentDeck, 3);
+    setDeck(remaining);
+    setDrawnPolicies(drawn);
+    setLegislativeStep("drawn");
+    setGameMessage(`${currentPresident?.name} drew 3 policies. Choose one to discard.`);
+  };
 
+  const discardPolicy = (discardIndex: number) => {
+    if (drawnPolicies.length !== 3) return;
+    const kept = drawnPolicies.filter((_, i) => i !== discardIndex);
+    const discarded = drawnPolicies[discardIndex];
+    setDrawnPolicies(kept);
+    setDiscard(prev => [...prev, discarded]);
+    setLegislativeStep("chancellorSelect");
+    setGameMessage("Policy discarded. Select Chancellor.");
+  };
+
+  const selectChancellor = (chancellorIdx: number) => {
+    setCurrentChancellorIndex(chancellorIdx);
+    setLegislativeStep("chancellorChoose");
+    setGameMessage(`${players[chancellorIdx].name} is Chancellor. Choose policy.`);
+  };
+
+  const chancellorChoose = (chosenIndex: number) => {
+    if (drawnPolicies.length !== 2) return;
+    const chosen = drawnPolicies[chosenIndex];
+    const other = drawnPolicies[1 - chosenIndex];
+    enactPolicy(chosen);
+    setDiscard(prev => [...prev, other]);
+    setDrawnPolicies([]);
+    setCurrentChancellorIndex(null);
+    setLegislativeStep("enacted");
+  };
+
+const enactPolicy = (policy: Policy) => {
+  let newLib = liberalPolicies;
+  let newFas = fascistPolicies;
+  let power: string | null = null;
+
+  if (policy === "liberal") {
+    newLib = Math.min(5, liberalPolicies + 1);
+    setLiberalPolicies(newLib);
+  } else {
+    newFas = Math.min(6, fascistPolicies + 1);
+    setFascistPolicies(newFas);
+    power = getFascistPowerDescription(players.length, newFas);
+  }
+
+  setLastEnacted({ policy, power });
+
+  if (newLib >= 5) {
+    setWinner("liberal");
+    setGameMessage("Liberals win with 5 policies!");
+    setTimeout(() => setStep("summary"), 2000);
+    return;
+  }
+  if (newFas >= 6) {
+    setWinner("fascist");
+    setGameMessage("Fascists win with 6 policies!");
+    setTimeout(() => setStep("summary"), 2000);
+    return;
+  }
+
+  const policyMessage = `${policy.toUpperCase()} policy enacted.`;
+  const fullMessage = power ? `${policyMessage} Special Power: ${power}` : policyMessage;
+
+  setGameMessage(fullMessage);
+
+  // Keep the message longer
+  setLastPresidentIndex(currentPresidentIndex);
+  setLastChancellorIndex(currentChancellorIndex);
+
+  setTimeout(() => {
+    advanceToNextPresident();
+    setLegislativeStep("idle");
+    // Clear the message after a bit but keep lastEnacted for reference
+    setTimeout(() => setGameMessage(""), 4000);
+  }, 2500);
+};
+
+  const advanceToNextPresident = () => {
+    let next = (currentPresidentIndex + 1) % players.length;
+    while (killedPlayers.has(players[next].name) && players.length > 1) {
+      next = (next + 1) % players.length;
+    }
+    setCurrentPresidentIndex(next);
+    setGameMessage(`Next President: ${players[next].name}`);
+  };
+
+const revealFaction = (name: string) => {
+  const player = players.find(p => p.name === name);
+  if (!player) return;
+
+  const faction = getPlayerFaction(player);
+  setFactionReveals(prev => ({ ...prev, [name]: faction }));
+  setGameMessage(`${name} is a ${faction}. (Hiding in 5 seconds...)`);
+
+  // Auto-hide after 5 seconds for privacy
+  setTimeout(() => {
+    setFactionReveals(prev => {
+      const updated = { ...prev };
+      delete updated[name];
+      return updated;
+    });
+    setGameMessage("Faction hidden.");
+  }, 5000);
+};
+
+
+  const saveGameResult = () => {
+    if (!players.length || !declaredHitler) return;
     const entry: GameHistoryEntry = {
       playedAt: new Date().toISOString(),
-      players: players.map((player) => player.name),
+      players: players.map(p => p.name),
       liberalTeam,
       fascistTeam,
       winner,
       declaredHitler,
       liberalPolicies,
-      fascistPolicies
+      fascistPolicies,
+      killedPlayers: Array.from(killedPlayers)
     };
 
+    
     saveHistoryEntry(entry);
     recordGamePlayerStats({
       gameId: "secret-hitler",
       players: entry.players,
       winners: entry.winner === "liberal" ? entry.liberalTeam : entry.fascistTeam,
-      numericStatsByPlayer: {
-        [entry.declaredHitler]: { hitlerCount: 1 }
-      }
+      numericStatsByPlayer: { [entry.declaredHitler]: { hitlerCount: 1 } }
     });
-    setHistory((items) => [entry, ...items].slice(0, MAX_HISTORY_ITEMS));
+    setHistory(items => [entry, ...items].slice(0, MAX_HISTORY_ITEMS));
   };
 
   const deletePlayer = (name: string) => {
-    if (typeof window !== "undefined" && !window.confirm(`Delete ${name} from saved players? This will not remove past game results.`)) {
-      return;
-    }
-
+    if (typeof window !== "undefined" && !window.confirm(`Delete ${name}?`)) return;
     deletePlayerName(name);
-    const next = savedNames.filter((n) => n !== name);
+    const next = savedNames.filter(n => n !== name);
     setSavedNames(next);
   };
 
   const deleteGame = (playedAt: string) => {
-    const nextHistory = history.filter((e) => e.playedAt !== playedAt);
+    const nextHistory = history.filter(e => e.playedAt !== playedAt);
     window.localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(nextHistory));
     setHistory(nextHistory);
   };
@@ -216,9 +334,9 @@ function SecretHitlerRoleReveal({ onBackHome }: { onBackHome: () => void }) {
     setHistory([]);
   };
 
-  const reset = () => {
+  const reset = (keepPlayers = false) => {
     setStep("count");
-    setSelectedNames([]);
+    setSelectedNames(keepPlayers ? selectedNames : []);
     setPlayers([]);
     setCurrentIndex(0);
     setWinner("liberal");
@@ -229,43 +347,36 @@ function SecretHitlerRoleReveal({ onBackHome }: { onBackHome: () => void }) {
     setSavedNames(loadSavedPlayerNames());
     setHistory(loadHistory());
     setFrontTab("setup");
+    setDeck([]);
+    setDiscard([]);
+    setCurrentPresidentIndex(0);
+    setCurrentChancellorIndex(null);
+    setLastPresidentIndex(null);
+    setLastChancellorIndex(null);
+    setDrawnPolicies([]);
+    setLegislativeStep("idle");
+    setKilledPlayers(new Set());
+    setFactionReveals({});
+    setLastEnacted(null);
+    setGameMessage("");
   };
 
   return (
     <main className="shell">
       <section className="hero-card">
         <div className="hero-copy">
-          <p className="eyebrow">Secret Hitler role reveal</p>
-          <h1>Pass the phone. Reveal one role at a time.</h1>
-          <p className="lede">Roles are private per turn. Use touch controls only after entering names.</p>
+          <p className="eyebrow">Secret Hitler</p>
+          <h1>Role Reveal + Full Game</h1>
           <div className="actions">
-            <button type="button" className="secondary" onClick={onBackHome}>
-              Back to game hub
-            </button>
+            <button type="button" className="secondary" onClick={onBackHome}>Back to game hub</button>
           </div>
         </div>
 
         {step === "count" ? (
           <section className="panel" aria-labelledby="count-heading">
-            <div className="panel-tabs" role="tablist" aria-label="Secret Hitler front page tabs">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={frontTab === "setup"}
-                className={`panel-tab${frontTab === "setup" ? " active" : ""}`}
-                onClick={() => setFrontTab("setup")}
-              >
-                New game
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={frontTab === "history"}
-                className={`panel-tab${frontTab === "history" ? " active" : ""}`}
-                onClick={() => setFrontTab("history")}
-              >
-                Past games
-              </button>
+            <div className="panel-tabs" role="tablist">
+              <button type="button" role="tab" className={`panel-tab${frontTab === "setup" ? " active" : ""}`} onClick={() => setFrontTab("setup")}>New game</button>
+              <button type="button" role="tab" className={`panel-tab${frontTab === "history" ? " active" : ""}`} onClick={() => setFrontTab("history")}>Past games</button>
             </div>
 
             {frontTab === "setup" ? (
@@ -280,69 +391,47 @@ function SecretHitlerRoleReveal({ onBackHome }: { onBackHome: () => void }) {
                   ))}
                 </div>
                 <div className="actions">
-                  <button type="button" className="primary" onClick={() => setStep("names")}>
-                    Continue
-                  </button>
+                  <button type="button" className="primary" onClick={() => setStep("names")}>Continue</button>
                 </div>
-
-                {playerStats.length > 0 ? (
-                  <>
-                    <h3 className="section-subhead">Player stats</h3>
-                    <div className="stats-table">
-                      <div className="stats-header">
-                        <span>Player</span>
-                        <span title="Games played">GP</span>
-                        <span title="Wins">W</span>
-                        <span title="Losses">L</span>
-                        <span title="Times as Hitler">🧔</span>
-                        <span />
-                      </div>
-                      {playerStats.map((s) => (
-                        <div key={s.name} className="stats-row">
-                          <span className="stats-name">{s.name}</span>
-                          <span className="stats-num">{s.games}</span>
-                          <span className="stats-num win-num">{s.wins}</span>
-                          <span className="stats-num loss-num">{s.losses}</span>
-                          <span className="stats-num hitler-num">{s.hitlerCount > 0 ? s.hitlerCount : "—"}</span>
-                          <button type="button" className="del-btn" title={`Delete ${s.name} from saved players`} onClick={() => deletePlayer(s.name)}>✕</button>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                ) : null}
               </>
             ) : history.length > 0 ? (
               <>
-                <div className="section-subhead-row">
-                  <h3 className="section-subhead" style={{ margin: 0 }}>Recent games</h3>
-                  <button type="button" className="del-btn-text" onClick={clearAllHistory}>Clear all</button>
-                </div>
-                <div className="history-cards">
-                  {history.map((entry) => (
-                    <div key={entry.playedAt} className={`history-card hc-${entry.winner}`}>
-                      <div className="hc-header">
-                        <span className={`winner-badge wb-${entry.winner}`}>{entry.winner === "liberal" ? "🕊️ Liberals won" : "💀 Fascists won"}</span>
-                        <span className="hc-date">{new Date(entry.playedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
-                        <button type="button" className="del-btn" title="Delete this game" onClick={() => deleteGame(entry.playedAt)}>✕</button>
-                      </div>
-                      <div className="hc-details">
-                        <span className="hc-label">Hitler</span>
-                        <span className="hc-value">🧔 {entry.declaredHitler}</span>
-                        <span className="hc-label">Players</span>
-                        <span className="hc-value">{entry.players.join(", ")}</span>
-                        <span className="hc-label">Policies</span>
-                        <span className="hc-value">
-                          <span className="policy-pip lib">{entry.liberalPolicies} liberal</span>
-                          {" / "}
-                          <span className="policy-pip fas">{entry.fascistPolicies} fascist</span>
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+    <div className="section-subhead-row">
+      <h3 className="section-subhead" style={{ margin: 0 }}>Recent games</h3>
+      <button type="button" className="del-btn-text" onClick={clearAllHistory}>Clear all</button>
+    </div>
+    <div className="history-cards">
+      {history.map((entry) => (
+        <div key={entry.playedAt} className={`history-card hc-${entry.winner}`}>
+          <div className="hc-header">
+            <span className={`winner-badge wb-${entry.winner}`}>{entry.winner === "liberal" ? "🕊️ Liberals won" : "💀 Fascists won"}</span>
+            <span className="hc-date">{new Date(entry.playedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
+            <button type="button" className="del-btn" title="Delete this game" onClick={() => deleteGame(entry.playedAt)}>✕</button>
+          </div>
+          <div className="hc-details">
+            <span className="hc-label">Hitler</span>
+            <span className="hc-value">🧔 {entry.declaredHitler}</span>
+            <span className="hc-label">Players</span>
+            <span className="hc-value">{entry.players.join(", ")}</span>
+            <span className="hc-label">Policies</span>
+            <span className="hc-value">
+              <span className="policy-pip lib">{entry.liberalPolicies} liberal</span>
+              {" / "}
+              <span className="policy-pip fas">{entry.fascistPolicies} fascist</span>
+            </span>
+            {entry.killedPlayers && entry.killedPlayers.length > 0 && (
+              <>
+                <span className="hc-label">Killed</span>
+                <span className="hc-value">{entry.killedPlayers.join(", ")}</span>
               </>
-            ) : (
-              <p className="support-copy">No Secret Hitler games saved yet.</p>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  </>
+) : (
+              <p className="support-copy">No games saved yet.</p>
             )}
           </section>
         ) : null}
@@ -354,29 +443,14 @@ function SecretHitlerRoleReveal({ onBackHome }: { onBackHome: () => void }) {
 
             <label className="field field-wide">
               <span>Add new name</span>
-              <input
-                type="text"
-                value={nameInput}
-                onChange={(event) => setNameInput(event.target.value)}
-                placeholder="Enter name"
-              />
+              <input type="text" value={nameInput} onChange={(e) => setNameInput(e.target.value)} placeholder="Enter name" />
             </label>
             <div className="actions">
-              <button
-                type="button"
-                className="primary"
-                onClick={() => {
-                  addName(nameInput);
-                  setNameInput("");
-                }}
-              >
-                Add name
-              </button>
+              <button type="button" className="primary" onClick={() => { addName(nameInput); setNameInput(""); }}>Add name</button>
             </div>
 
-            <h3>Players you&apos;ve used before</h3>
+            <h3>Players you've used before</h3>
             <div className="game-grid">
-              {savedNames.length === 0 ? <p className="support-copy">No saved names yet.</p> : null}
               {savedNames.map((name) => {
                 const used = selectedNames.includes(name);
                 const stats = selectionStats.get(name);
@@ -389,7 +463,7 @@ function SecretHitlerRoleReveal({ onBackHome }: { onBackHome: () => void }) {
                     onClick={() => addName(name)}
                   >
                     <strong>{name}</strong>
-                    <span>{stats && stats.gamesPlayed > 0 ? `${stats.wins} wins • ${stats.gamesPlayed} games` : "No Secret Hitler games yet"}</span>
+                    <span>{stats && stats.gamesPlayed > 0 ? `${stats.wins} wins • ${stats.gamesPlayed} games` : "No games yet"}</span>
                   </button>
                 );
               })}
@@ -400,194 +474,117 @@ function SecretHitlerRoleReveal({ onBackHome }: { onBackHome: () => void }) {
               {selectedNames.map((name, index) => (
                 <div key={`${name}-${index}`} className="score-row">
                   <span>{index + 1}. {name}</span>
-                  <button type="button" className="secondary" onClick={() => removeName(index)}>
-                    Remove
-                  </button>
+                  <button type="button" className="secondary" onClick={() => removeName(index)}>Remove</button>
                 </div>
               ))}
             </div>
 
             <div className="actions">
-              <button type="button" className="secondary" onClick={() => setStep("count")}>
-                Back
-              </button>
-              <button
-                type="button"
-                className="primary"
-                disabled={selectedNames.length !== playerCount}
-                onClick={() => setStep("ready")}
-              >
-                Continue
-              </button>
+              <button type="button" className="secondary" onClick={() => setStep("count")}>Back</button>
+              <button type="button" className="primary" disabled={selectedNames.length !== playerCount} onClick={() => setStep("ready")}>Continue</button>
             </div>
           </section>
         ) : null}
 
         {step === "ready" ? (
-          <section className="panel" aria-labelledby="ready-heading">
-            <h2 id="ready-heading">Roles ready</h2>
+          <section className="panel">
+            <h2>Roles ready</h2>
             <p className="support-copy">Hand the phone to each player only when prompted.</p>
             <div className="actions">
-              <button type="button" className="primary" onClick={beginReveal}>
-                Begin role reveal
-              </button>
+              <button type="button" className="primary" onClick={beginReveal}>Begin role reveal</button>
             </div>
           </section>
         ) : null}
 
         {step === "buffer" && currentPlayer ? (
-          <section className="panel" aria-labelledby="buffer-heading">
-            <h2 id="buffer-heading">Hand the device to: {currentPlayer.name}</h2>
+          <section className="panel">
+            <h2>Hand the device to: {currentPlayer.name}</h2>
             <p className="support-copy">Only {currentPlayer.name} should tap reveal.</p>
             <div className="actions">
-              <button type="button" className="primary" onClick={() => setStep("reveal")}>
-                Reveal role
-              </button>
+              <button type="button" className="primary" onClick={() => setStep("reveal")}>Reveal role</button>
             </div>
           </section>
         ) : null}
 
         {step === "reveal" && currentPlayer && roleView ? (
-          <section className={`panel role-panel role-${roleView.theme}`} aria-labelledby="role-heading">
-            <h2 id="role-heading">{roleView.heading}</h2>
-            <p className="role-icon" aria-hidden>
-              {roleView.theme === "liberal" ? "🕊️" : roleView.theme === "fascist" ? "💀" : "💀🧔"}
-            </p>
+          <section className={`panel role-panel role-${roleView.theme}`}>
+            <h2>{roleView.heading}</h2>
             <div className="score-breakdown compact">
-              {roleView.lines.map((line) => (
-                <div key={line} className="score-row">
-                  <span>{line}</span>
-                </div>
-              ))}
+              {roleView.lines.map((line, i) => <div key={i} className="score-row"><span>{line}</span></div>)}
             </div>
             <div className="actions">
-              <button type="button" className="primary" onClick={goNextPlayer}>
-                Done - Pass to Next Player
-              </button>
+              <button type="button" className="primary" onClick={goNextPlayer}>Done - Pass to Next Player</button>
             </div>
           </section>
         ) : null}
 
-        {step === "summary" ? (
-          <section className="panel" aria-labelledby="summary-heading">
-            <h2 id="summary-heading">Roles revealed</h2>
+        {step === "inGame" && (
+          <section className="panel">
+            <h2>In-Game — Legislative Phase</h2>
+            <p className="support-copy">{gameMessage}</p>
 
-            {/* Team cards */}
-            <div className="summary-teams">
-              <article className="team-card liberal-side">
-                <p className="team-header">🕊️ Liberals</p>
-                <div className="name-chip-list">
-                  {liberalTeam.map((name) => (
-                    <span key={name} className="name-chip lib-chip">{name}</span>
-                  ))}
-                </div>
-              </article>
-              <article className="team-card fascist-side">
-                <p className="team-header">💀 Fascists</p>
-                <div className="name-chip-list">
-                  {fascistTeam.map((name) => (
-                    <span key={name} className={`name-chip fas-chip${name === actualHitler ? " hitler-chip" : ""}`}>
-                      {name === actualHitler ? "🧔 " : ""}{name}
-                    </span>
-                  ))}
-                </div>
-              </article>
+            <div><strong>President:</strong> {currentPresident?.name}</div>
+
+            <h3>Players (tap to reveal faction)</h3>
+            <div className="game-grid">
+              {players.map((p, i) => (
+                <button key={i} type="button" className="saved-player-card" onClick={() => revealFaction(p.name)}>
+                  {p.name} {factionReveals[p.name] && `(${factionReveals[p.name]})`} {killedPlayers.has(p.name) && "☠️"}
+                </button>
+              ))}
             </div>
 
-            {/* Policy track */}
-            <div className="policy-tracks">
-              <div className="policy-track-row">
-                <span className="track-label lib-label">Liberal</span>
-                <div className="track-dots">
-                  {[1,2,3,4,5].map((i) => (
-                    <span key={i} className={`pdot lib-dot${i <= liberalPolicies ? " filled" : ""}`} />
+            <div>
+              {legislativeStep === "idle" && <button type="button" className="primary" onClick={drawForPresident}>Draw 3 Policies</button>}
+              {legislativeStep === "drawn" && drawnPolicies.length === 3 && (
+                <div>
+                  <p>Discard one:</p>
+                  {drawnPolicies.map((p, i) => <button key={i} onClick={() => discardPolicy(i)}>{p}</button>)}
+                </div>
+              )}
+              {legislativeStep === "chancellorSelect" && (
+                <div>
+                  <p>Select Chancellor:</p>
+                  {availableChancellors.map(p => (
+                    <button key={p.name} onClick={() => selectChancellor(players.findIndex(pl => pl.name === p.name))}>{p.name}</button>
                   ))}
                 </div>
-                <div className="track-stepper">
-                  <button type="button" className="pip-btn" onClick={() => setLiberalPolicies((p) => Math.max(0, p - 1))}>−</button>
-                  <span className="pip-count">{liberalPolicies}</span>
-                  <button type="button" className="pip-btn" onClick={() => setLiberalPolicies((p) => Math.min(5, p + 1))}>+</button>
+              )}
+              {legislativeStep === "chancellorChoose" && drawnPolicies.length === 2 && (
+                <div>
+                  <p>Chancellor chooses:</p>
+                  {drawnPolicies.map((p, i) => <button key={i} onClick={() => chancellorChoose(i)}>{p}</button>)}
                 </div>
-              </div>
-              <div className="policy-track-row">
-                <span className="track-label fas-label">Fascist</span>
-                <div className="track-dots">
-                  {[1,2,3,4,5,6].map((i) => (
-                    <span key={i} className={`pdot fas-dot${i <= fascistPolicies ? " filled" : ""}`} />
-                  ))}
-                </div>
-                <div className="track-stepper">
-                  <button type="button" className="pip-btn" onClick={() => setFascistPolicies((p) => Math.max(0, p - 1))}>−</button>
-                  <span className="pip-count">{fascistPolicies}</span>
-                  <button type="button" className="pip-btn" onClick={() => setFascistPolicies((p) => Math.min(6, p + 1))}>+</button>
-                </div>
-              </div>
+              )}
             </div>
 
-            {/* Result recording */}
-            <div className="result-form">
-              <div className="winner-row">
-                <span className="result-label">Who won?</span>
-                <div className="winner-toggle">
-                  <button
-                    type="button"
-                    className={`wtog lib${winner === "liberal" ? " active" : ""}`}
-                    onClick={() => setWinner("liberal")}
-                  >🕊️ Liberals</button>
-                  <button
-                    type="button"
-                    className={`wtog fas${winner === "fascist" ? " active" : ""}`}
-                    onClick={() => setWinner("fascist")}
-                  >💀 Fascists</button>
-                </div>
+            <div>Liberal: {liberalPolicies}/5 | Fascist: {fascistPolicies}/6</div>
+
+            {lastEnacted && lastEnacted.power && (
+              <div className="special-power-alert">
+                <strong>Special Power Triggered:</strong> {lastEnacted.power}
               </div>
-              <div className="hitler-row">
-                <span className="result-label">🧔 Hitler was</span>
-                <select className="hitler-select" value={declaredHitler} onChange={(event) => setDeclaredHitler(event.target.value)}>
-                  <option value="">Select player</option>
-                  {players.map((player) => (
-                    <option key={player.name} value={player.name}>{player.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            )}
 
             <div className="actions">
-              <button type="button" className="secondary" onClick={saveGameResult} disabled={!declaredHitler}>
-                Save result
-              </button>
-              <button type="button" className="primary" onClick={reset}>
-                New game
-              </button>
+              <button type="button" className="secondary" onClick={() => setStep("summary")}>End Game → Summary</button>
             </div>
+          </section>
+        )}
 
-            {history.length > 0 ? (
-              <>
-                <h3 className="section-subhead">Recent games</h3>
-                <div className="history-cards">
-                  {history.map((entry) => (
-                    <div key={entry.playedAt} className={`history-card hc-${entry.winner}`}>
-                      <div className="hc-header">
-                        <span className={`winner-badge wb-${entry.winner}`}>{entry.winner === "liberal" ? "🕊️ Liberals won" : "💀 Fascists won"}</span>
-                        <span className="hc-date">{new Date(entry.playedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
-                      </div>
-                      <div className="hc-details">
-                        <span className="hc-label">Hitler</span>
-                        <span className="hc-value">🧔 {entry.declaredHitler}</span>
-                        <span className="hc-label">Players</span>
-                        <span className="hc-value">{entry.players.join(", ")}</span>
-                        <span className="hc-label">Policies</span>
-                        <span className="hc-value">
-                          <span className="policy-pip lib">{entry.liberalPolicies} liberal</span>
-                          {" / "}
-                          <span className="policy-pip fas">{entry.fascistPolicies} fascist</span>
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : null}
+        {step === "summary" ? (
+          <section className="panel">
+            <h2>Game Over — {winner === "liberal" ? "Liberals Win!" : "Fascists Win!"}</h2>
+            <p>Hitler was: {declaredHitler}</p>
+            <p>Liberal Policies: {liberalPolicies}/5</p>
+            <p>Fascist Policies: {fascistPolicies}/6</p>
+            <p>Killed: {killedPlayers.size > 0 ? Array.from(killedPlayers).join(", ") : "None"}</p>
+
+            <div className="actions">
+              <button type="button" className="secondary" onClick={saveGameResult}>Save Result</button>
+              <button type="button" className="primary" onClick={() => reset(true)}>Play Again with Same Players</button>
+              <button type="button" className="primary" onClick={reset}>New Game</button>
+            </div>
           </section>
         ) : null}
       </section>
