@@ -41,26 +41,25 @@ export function drawPolicies(deck: Policy[], count: number): { drawn: Policy[]; 
   return { drawn, remaining };
 }
 
-// Helper for special power triggers (based on player count and fascist policy count)
-export function getFascistPowerDescription(playerCount: number, fascistPolicies: number): string | null {
-  if (fascistPolicies === 0) return null;
+export function getFascistPowerDescription(playerCount: number, fascistPolicies: number): string {
+  if (fascistPolicies >= 6) return "Fascist Victory";
 
   if (playerCount <= 6) {
     if (fascistPolicies === 3) return "President examines top 3 cards and puts them back in same order";
-    if (fascistPolicies === 4 || fascistPolicies === 5) return "President may kill a player";
-    if (fascistPolicies >= 5) return "Veto power unlocked";
-  } else if (playerCount <= 8) {
-    if (fascistPolicies === 2) return "President may investigate a player";
-    if (fascistPolicies === 3) return "President picks next President";
-    if (fascistPolicies === 4 || fascistPolicies === 5) return "President may kill a player";
-    if (fascistPolicies >= 5) return "Veto power unlocked";
-  } else { // 9-10
-    if (fascistPolicies === 1) return "President may investigate a player";
-    if (fascistPolicies === 3) return "President picks next President";
-    if (fascistPolicies === 4 || fascistPolicies === 5) return "President may kill a player";
-    if (fascistPolicies >= 5) return "Veto power unlocked";
+    if (fascistPolicies === 4 || fascistPolicies === 5) return "President executes one player";
+  } 
+  else if (playerCount <= 8) {
+    if (fascistPolicies === 2) return "President investigates a player's loyalty";
+    if (fascistPolicies === 3) return "President names next President";
+    if (fascistPolicies >= 4) return "President executes one player";
+  } 
+  else { // 9-10 players
+    if (fascistPolicies === 1 || fascistPolicies === 2) return "President investigates a player's loyalty";
+    if (fascistPolicies === 3) return "President names next President";
+    if (fascistPolicies >= 4) return "President executes one player";
   }
-  return null;
+
+  return "No power triggered";
 }
 
 export function getRoleDistribution(playerCount: number): RoleDistribution {
