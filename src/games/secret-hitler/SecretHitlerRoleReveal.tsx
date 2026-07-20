@@ -219,8 +219,10 @@ const nameNextPresident = () => {
   }
 };
 
+
+
 const killPlayer = () => {
-  const name = promptForPlayer("Kill a player:");
+  const name = promptForPlayer("Execute a player:");
   if (!name) return;
   const idx = players.findIndex(p => p.name === name);
   if (idx !== -1) {
@@ -230,7 +232,7 @@ const killPlayer = () => {
 
     if (players[idx].role === "hitler") {
       setWinner("fascist");
-      setGameMessage("HITLER HAS BEEN KILLED! FASCISTS WIN!");
+      setGameMessage("HITLER HAS BEEN EXECUTED! FASCISTS WIN!");
       setTimeout(() => setStep("summary"), 1200);
     } else {
       setGameMessage(`💀 ${name} has been killed.`);
@@ -261,23 +263,11 @@ const handleFailedElection = () => {
     // Show failed election modal
     setShowFailedElectionModal(true);
 
-    // Wait longer so user can read it
-    setTimeout(() => {
-      setEnactedThisTurn({ 
-        policy: randomPolicy, 
-        power: null, 
-        fromFailedElection: true 
-      });
-      setShowEnactModal(true);
-
-      // Actually enact the policy
-      enactPolicy(randomPolicy, true);
-
-      setFailedElections(0);
-      setFailedElectionCount(0);
-    }, 2500); // 2.5 seconds — long enough to read
+    // Show enacted policy modal after user closes the failed modal
+    // We'll trigger it from the "Continue" button in the failed modal if needed
   } else {
     setShowFailedElectionModal(true);
+    advanceToNextPresident(); // advance president on every failed election
   }
 };
 
@@ -326,7 +316,6 @@ const discardPolicy = (discardIndex: number) => {
   setLegislativeStep("chancellorChoose");
 
   const chancellorName = players[currentChancellorIndex!]?.name || "Chancellor";
-  setGameMessage(`Policy discarded. ${chancellorName}, choose one to enact.`);
 };
 
 const approveChancellor = () => {
@@ -339,7 +328,8 @@ const approveChancellor = () => {
 
 const rejectChancellor = () => {
   setProposedChancellorIndex(null);
-  handleFailedElection();   // Trigger failed election
+  setFailedElections(failedElections + 1); // increment immediately
+  handleFailedElection();
 };
 
 const selectChancellor = (chancellorIdx: number) => {
@@ -356,15 +346,26 @@ const selectChancellor = (chancellorIdx: number) => {
 
 const chancellorChoose = (chosenIndex: number) => {
   if (drawnPolicies.length !== 2) return;
+
   const chosen = drawnPolicies[chosenIndex];
   const other = drawnPolicies[1 - chosenIndex];
-  
-  enactPolicy(chosen);
+
+  // Discard the other
   setDiscard(prev => [...prev, other]);
   setDrawnPolicies([]);
+
+  // Enact the chosen policy and show modal
+  setEnactedThisTurn({ 
+    policy: chosen, 
+    power: null, 
+    fromFailedElection: false 
+  });
+  setShowEnactModal(true);
+
+  enactPolicy(chosen);
+
   setCurrentChancellorIndex(null);
   setLegislativeStep("enacted");
-
 };
 
 const enactPolicy = (policy: Policy, ignorePower = false) => {
@@ -416,18 +417,30 @@ const enactPolicy = (policy: Policy, ignorePower = false) => {
   setLastEnacted(result);
   setEnactedThisTurn({ policy, power, fromFailedElection: false });
 
-  // Special Power Alert
-  if (power) {
-    setTimeout(() => {
-      const useNow = confirm(`Fascist Policy Enacted!\n\n${power}\n\nUse this power now?`);
-      if (useNow) {
-        if (power.includes("examines top 3")) peekNextThreePolicies();
-        else if (power.includes("names next")) nameNextPresident();
-        else if (power.includes("investigate")) peekPlayerRole();
-        else if (power.includes("kill")) killPlayer();
+  // Special Power Alert (this was missing)
+if (power) {
+  setTimeout(() => {
+    const useNow = window.confirm(`FASCIST POLICY ENACTED!\n\n${power}\n\nUse this power now?`);
+
+    if (useNow) {
+      console.log("Triggering power:", power); // debug
+
+      if (power.includes("examines top 3")) {
+        console.log("look at 3")
+        peekNextThreePolicies();
+      } else if (power.includes("names next")) {
+        console.log("successor")
+        nameNextPresident();
+      } else if (power.includes("investigate")) {
+        console.log("who are you")
+        peekPlayerRole();
+      } else if (power.includes("kill")) {
+        console.log("execute order 66")
+        killPlayer();
       }
-    }, 600);
-  }
+    }
+  }, 700);
+}
 
   setLastPresidentIndex(currentPresidentIndex);
   setLastChancellorIndex(currentChancellorIndex);
@@ -437,6 +450,7 @@ const enactPolicy = (policy: Policy, ignorePower = false) => {
     setLegislativeStep("idle");
   }, 800);
 };
+
 
   const advanceToNextPresident = () => {
     let next = (currentPresidentIndex + 1) % players.length;
@@ -557,6 +571,13 @@ const revealFaction = (name: string) => {
     setFactionReveals({});
     setLastEnacted(null);
     setGameMessage("");
+
+    // Reset Veto Power
+  setVetoUnlocked(false);
+  
+  // Reset failed election tracking
+  setFailedElections(0);
+  setFailedElectionCount(0);
   };
   return (
     <main className="shell">
@@ -905,12 +926,6 @@ const revealFaction = (name: string) => {
 
     <div>Liberal: {liberalPolicies}/5 | Fascist: {fascistPolicies}/6</div>
 
-    {lastEnacted?.power && (
-      <div className="special-power-alert">
-        <strong>Special Power Triggered:</strong> {lastEnacted.power}
-      </div>
-    )}
-
     <div className="actions">
   <button type="button" className="secondary" onClick={() => reset(true)}>
     Restart with Same Players
@@ -925,16 +940,36 @@ const revealFaction = (name: string) => {
 
 {step === "summary" && (
   <section className="panel">
-    <h2>Game Over — {winner === "liberal" ? "Liberals Win!" : "Fascists Win!"}</h2>
+    <h2>Game Over</h2>
 
-    <div style={{ margin: "20px 0" }}>
+    {winner === "liberal" ? (
+      <>
+        <h3 style={{ color: "#22c55e" }}>Liberals Win!</h3>
+        {killedPlayers.has(declaredHitler) ? (
+          <p>Hitler was killed.</p>
+        ) : (
+          <p>The Liberals passed 5 Liberal policies.</p>
+        )}
+      </>
+    ) : (
+      <>
+        <h3 style={{ color: "#ef4444" }}>Fascists Win!</h3>
+        {fascistPolicies >= 6 ? (
+          <p>The Fascists passed 6 Fascist policies.</p>
+        ) : (
+          <p>Hitler became Chancellor after 3 or more Fascist policies.</p>
+        )}
+      </>
+    )}
+
+    <div style={{ margin: "24px 0" }}>
       <p><strong>Hitler was:</strong> {declaredHitler}</p>
       <p><strong>Liberals:</strong> {liberalTeam.join(", ")}</p>
       <p><strong>Fascists:</strong> {fascistTeam.join(", ")}</p>
     </div>
 
     <div>
-      <p><strong>Final Policies:</strong> Liberal {liberalPolicies}/5 | Fascist {fascistPolicies}/6</p>
+      <p><strong>Final Score:</strong> Liberal {liberalPolicies}/5 | Fascist {fascistPolicies}/6</p>
       <p><strong>Killed Players:</strong> {killedPlayers.size > 0 ? Array.from(killedPlayers).join(", ") : "None"}</p>
     </div>
 
@@ -946,52 +981,75 @@ const revealFaction = (name: string) => {
   </section>
 )}
       </section>
-
-              {/* Enacted Policy Modal */}
 {/* Enacted Policy Modal */}
 {showEnactModal && enactedThisTurn && (
   <div className="modal">
     <div className="modal-content">
       <h3>Policy Enacted</h3>
-      
-      {enactedThisTurn.fromFailedElection ? (
-        <p style={{ fontSize: "1.1rem", color: "#ef4444" }}>
-          The Government has failed 3 times!<br/>
-          The top policy from the deck was adopted:
-        </p>
-      ) : (
-        <p style={{ fontSize: "1.1rem" }}>
-          Chancellor chose:
-        </p>
-      )}
-
-      <p style={{ fontSize: "1.6rem", fontWeight: "bold", margin: "16px 0" }}>
+      <p style={{ fontSize: "1.8rem", fontWeight: "bold", margin: "20px 0" }}>
         {enactedThisTurn.policy.toUpperCase()}
       </p>
 
       <p>Liberal: {liberalPolicies}/5 | Fascist: {fascistPolicies}/6</p>
 
-      {enactedThisTurn.power && <p style={{ color: "#fbbf24" }}>Special Power: {enactedThisTurn.power}</p>}
+      {enactedThisTurn.power && (
+        <p style={{ color: "#fbbf24", marginTop: "12px" }}>
+          <strong>Special Power:</strong> {enactedThisTurn.power}
+        </p>
+      )}
 
-      <button onClick={() => setShowEnactModal(false)}>Continue</button>
+      <button onClick={() => {
+        setShowEnactModal(false);
+        setTimeout(() => {
+          advanceToNextPresident();
+          setLegislativeStep("idle");
+        }, 300);
+      }}>
+        Continue
+      </button>
     </div>
   </div>
 )}
-
         {/* Failed Election Modal */}
-        {showFailedElectionModal && (
-          <div className="modal">
-            <div className="modal-content">
-              <h3>Government Failed</h3>
-              <p style={{ fontSize: "1.4rem", margin: "16px 0" }}>
-                Failed Election <strong>#{failedElectionCount} of 3</strong>
-              </p>
-              <p>If this reaches 3, the top policy from the deck will be enacted automatically.</p>
-              <button onClick={() => setShowFailedElectionModal(false)}>OK</button>
-            </div>
-          </div>
-        )}
+{showFailedElectionModal && (
+  <div className="modal">
+    <div className="modal-content">
+      <h3>Government Failed</h3>
+      <p style={{ fontSize: "1.4rem", margin: "16px 0" }}>
+        Failed Election <strong>#{failedElectionCount} of 3</strong>
+      </p>
+      <p>If this reaches 3, the top policy from the deck will be enacted automatically.</p>
+      
+      <button onClick={() => {
+  setShowFailedElectionModal(false);
+  
+  if (failedElectionCount >= 3) {
+    let currentDeck = reshuffleIfNeeded(deck);
+    const randomPolicy = currentDeck[0];
+    const remaining = currentDeck.slice(1);
+    setDeck(remaining);
 
+    setEnactedThisTurn({ 
+      policy: randomPolicy, 
+      power: null, 
+      fromFailedElection: true 
+    });
+    setShowEnactModal(true);
+
+    // Enact the policy
+    enactPolicy(randomPolicy, true);
+
+    setFailedElections(0);
+    setFailedElectionCount(0);
+  }
+}}>
+  Continue
+</button>
+
+
+    </div>
+  </div>
+)}
         
     </main>
   );
