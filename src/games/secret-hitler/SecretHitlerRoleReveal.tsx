@@ -326,12 +326,42 @@ const resolveFascistPower = (power: string | null) => {
       }
     }
   } else if (lowerPower.includes("kill") || lowerPower.includes("executes") || lowerPower.includes("shoot")) {
-    const target = prompt("Kill which player? (type their name)");
-    if (target) {
-      setKilledPlayers(prev => new Set([...prev, target]));
-      alert(`${target} has been killed.`);
+  const eligible = players.filter(
+    p => !killedPlayers.has(p.name) && p.name !== currentPresident?.name
+  );
+
+  if (eligible.length === 0) {
+    alert("No eligible players left to execute.");
+    return;
+  }
+
+  const list = eligible.map(p => p.name).join("\n");
+  const target = prompt(
+    `President ${currentPresident?.name}, who do you want to execute?\n\nEligible players:\n${list}\n\nType the exact name:`
+  );
+
+if (target) {
+    const found = eligible.find(
+      p => p.name.toLowerCase() === target.trim().toLowerCase()
+    );
+
+    if (found) {
+      setKilledPlayers(prev => new Set([...prev, found.name]));
+
+      // Check if Hitler was executed
+      if (found.role === "hitler") {
+        setWinner("liberal");
+        setGameMessage("Hitler has been executed! Liberals win!");
+        setTimeout(() => setStep("summary"), 500);
+        return;
+      }
+
+      alert(`${found.name} has been executed.`);
+    } else {
+      alert("That name is not on the eligible list.");
     }
-  } else if (lowerPower.includes("examine top 3") || lowerPower.includes("top 3")) {
+  }
+} else if (lowerPower.includes("examine top 3") || lowerPower.includes("top 3")) {
     alert("Top 3 cards: " + deck.slice(0, 3).join(", "));
   } 
 };
@@ -416,14 +446,6 @@ const chancellorChoose = (chosenIndex: number) => {
   // Discard the other
   setDiscard(prev => [...prev, other]);
   setDrawnPolicies([]);
-
-  // Enact the chosen policy and show modal
-  setEnactedThisTurn({ 
-    policy: chosen, 
-    power: null, 
-    fromFailedElection: false 
-  });
-  setShowEnactModal(true);
 
   enactPolicy(chosen);
 
