@@ -229,7 +229,9 @@ const peekPlayerRole = () => {
   const name = promptForPlayer("Peek a player's role:");
   if (!name) return;
   const player = players.find(p => p.name === name);
-
+  if (player) {
+    alert(`${player.name}'s role is: ${player.role}`);
+  }
 };
 const nameNextPresident = () => {
   const name = promptForPlayer("Choose next President:");
@@ -329,9 +331,11 @@ const resolveFascistPower = (power: string | null) => {
       setKilledPlayers(prev => new Set([...prev, target]));
       alert(`${target} has been killed.`);
     }
-  } else (lowerPower.includes("examine top 3") || lowerPower.includes("top 3")) {
+  } else if (lowerPower.includes("examine top 3") || lowerPower.includes("top 3")) {
     alert("Top 3 cards: " + deck.slice(0, 3).join(", "));
-  } 
+  } else {
+    alert("Power: " + power);
+  }
 };
   const reshuffleIfNeeded = (currentDeck: Policy[]) => {
     if (currentDeck.length >= 3) return currentDeck;
