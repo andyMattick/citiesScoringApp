@@ -229,9 +229,7 @@ const peekPlayerRole = () => {
   const name = promptForPlayer("Peek a player's role:");
   if (!name) return;
   const player = players.find(p => p.name === name);
-  if (player) {
-    alert(`${player.name}'s role is: ${player.role}`);
-  }
+
 };
 const nameNextPresident = () => {
   const name = promptForPlayer("Choose next President:");
@@ -331,11 +329,9 @@ const resolveFascistPower = (power: string | null) => {
       setKilledPlayers(prev => new Set([...prev, target]));
       alert(`${target} has been killed.`);
     }
-  } else if (lowerPower.includes("examine top 3") || lowerPower.includes("top 3")) {
+  } else (lowerPower.includes("examine top 3") || lowerPower.includes("top 3")) {
     alert("Top 3 cards: " + deck.slice(0, 3).join(", "));
-  } else {
-    alert("Power: " + power);
-  }
+  } 
 };
   const reshuffleIfNeeded = (currentDeck: Policy[]) => {
     if (currentDeck.length >= 3) return currentDeck;
@@ -1065,18 +1061,27 @@ const revealFaction = (name: string) => {
         </p>
       )}
 <button 
-
   onClick={() => {
     const power = lastEnacted?.power || enactedThisTurn?.power;
+    
+    // Check if this power already set the next president
+    const powerChoseNextPresident = power && (
+      power.toLowerCase().includes("picks next president") ||
+      power.toLowerCase().includes("next president")
+    );
+
     if (power) {
       resolveFascistPower(power);
     }
+    
     setShowEnactModal(false);
-    // Reset the guard for the next turn
     setPowerResolvedThisTurn(false);
 
-    // Advance president only after the player dismisses the modal
-    advanceToNextPresident();
+    // Only do the normal rotation if the power did NOT already choose the next president
+    if (!powerChoseNextPresident) {
+      advanceToNextPresident();
+    }
+
     setLegislativeStep("idle");
   }}
 >
