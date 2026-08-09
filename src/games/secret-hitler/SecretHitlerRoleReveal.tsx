@@ -1069,7 +1069,7 @@ const revealFaction = (name: string) => {
         </p>
       )}
 <button 
-<button 
+
   onClick={() => {
     const power = lastEnacted?.power || enactedThisTurn?.power;
     if (power) {
