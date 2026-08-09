@@ -68,6 +68,7 @@ function SecretHitlerRoleReveal({ onBackHome }: { onBackHome: () => void }) {
   const [fascistPolicies, setFascistPolicies] = useState<number>(0);
   const [history, setHistory] = useState<GameHistoryEntry[]>(() => loadHistory());
   const [frontTab, setFrontTab] = useState<FrontTab>("setup");
+  const [powerResolvedThisTurn, setPowerResolvedThisTurn] = useState(false);
 
   // In-Game State
   
@@ -294,26 +295,28 @@ const handleFailedElection = () => {
   }
 };
 
-const resolveFascistPower = (power: string | null) => {
-  if (!power) return;
 
-  console.log("Resolving power:", power); // debug
+
+const resolveFascistPower = (power: string | null) => {
+  if (!power || powerResolvedThisTurn) return;   // ← guard against double call
+
+  setPowerResolvedThisTurn(true);
+  console.log("Resolving power once:", power);
 
   const lowerPower = power.toLowerCase();
 
-if (lowerPower.includes("investigate")) {
-  const target = prompt("Investigate which player? (type their name)");
-  if (target) {
-    const player = players.find(p => p.name.toLowerCase() === target.toLowerCase());
-    if (player) {
-      // Always show only Liberal or Fascist (Hitler counts as Fascist)
-      const faction = player.role === "liberal" ? "Liberal" : "Fascist";
-      alert(`${target} is a ${faction}`);
-    } else {
-      alert("Player not found.");
+  if (lowerPower.includes("investigate")) {
+    const target = prompt("Investigate which player? (type their name)");
+    if (target) {
+      const player = players.find(p => p.name.toLowerCase() === target.toLowerCase());
+      if (player) {
+        const faction = player.role === "liberal" ? "Liberal" : "Fascist";
+        alert(`${target} is a ${faction}`);
+      } else {
+        alert("Player not found.");
+      }
     }
-  }
-} else if (lowerPower.includes("picks next president") || lowerPower.includes("next president")) {
+  } else if (lowerPower.includes("picks next president") || lowerPower.includes("next president")) {
     const newPres = prompt("Choose next President (type their name):");
     if (newPres) {
       const idx = players.findIndex(p => p.name.toLowerCase() === newPres.toLowerCase());
@@ -322,19 +325,18 @@ if (lowerPower.includes("investigate")) {
         alert(`Next President set to ${newPres}`);
       }
     }
-  } else if (lowerPower.includes("kill") || lowerPower.includes("executes one player") || lowerPower.includes("shoot")) {
+  } else if (lowerPower.includes("kill") || lowerPower.includes("executes") || lowerPower.includes("shoot")) {
     const target = prompt("Kill which player? (type their name)");
     if (target) {
       setKilledPlayers(prev => new Set([...prev, target]));
       alert(`${target} has been killed.`);
     }
-  } else if (lowerPower.includes("examine top 3") || lowerPower.includes("top 3 cards")) {
+  } else if (lowerPower.includes("examine top 3") || lowerPower.includes("top 3")) {
     alert("Top 3 cards: " + deck.slice(0, 3).join(", "));
   } else {
-    alert("Power triggered: " + power); // fallback
+    alert("Power: " + power);
   }
 };
-
   const reshuffleIfNeeded = (currentDeck: Policy[]) => {
     if (currentDeck.length >= 3) return currentDeck;
     const combined = [...currentDeck, ...discard];
