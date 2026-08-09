@@ -333,9 +333,7 @@ const resolveFascistPower = (power: string | null) => {
     }
   } else if (lowerPower.includes("examine top 3") || lowerPower.includes("top 3")) {
     alert("Top 3 cards: " + deck.slice(0, 3).join(", "));
-  } else {
-    alert("Power: " + power);
-  }
+  } 
 };
   const reshuffleIfNeeded = (currentDeck: Policy[]) => {
     if (currentDeck.length >= 3) return currentDeck;
