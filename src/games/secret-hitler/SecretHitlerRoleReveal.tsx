@@ -189,7 +189,7 @@ const goNextPlayer = () => {
 
 const initializeInGame = () => {
   const newDeck = shufflePolicies(createPolicyDeck());
-  
+  setPowerResolvedThisTurn(false);    
   setDeck(newDeck);
   setDiscard([]);
   setLiberalPolicies(0);
@@ -471,12 +471,6 @@ const enactPolicy = (policy: Policy, ignorePower = false) => {
   setEnactedThisTurn(result);
   setShowEnactModal(true);
 
-  // Resolve power immediately after showing the modal
-  if (power) {
-    setTimeout(() => {
-      resolveFascistPower(power);
-    }, 500); // small delay so the modal can render
-  }
 
   // Unlock Veto at 5 Fascist policies
   if (newFas >= 5) {
@@ -1078,6 +1072,8 @@ const revealFaction = (name: string) => {
       resolveFascistPower(power);
     }
     setShowEnactModal(false);
+    // Reset the guard for the next turn
+    setPowerResolvedThisTurn(false);
 
     // Advance president only after the player dismisses the modal
     advanceToNextPresident();
