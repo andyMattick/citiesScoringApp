@@ -1069,18 +1069,21 @@ const revealFaction = (name: string) => {
         </p>
       )}
 <button 
+<button 
   onClick={() => {
     const power = lastEnacted?.power || enactedThisTurn?.power;
-    console.log("Continue clicked - Power to resolve:", power); // debug
     if (power) {
       resolveFascistPower(power);
     }
     setShowEnactModal(false);
+
+    // Advance president only after the player dismisses the modal
+    advanceToNextPresident();
+    setLegislativeStep("idle");
   }}
 >
   Continue
 </button>
-
     </div>
   </div>
 )}
